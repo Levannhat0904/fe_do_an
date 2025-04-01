@@ -1,0 +1,12 @@
+.anchor {
+  :global {
+    .ant-anchor::before {
+      border-inline-start: none !important;
+    }
+    .ant-anchor {
+      .ant-anchor-ink-visible {
+        display: none !important;
+      }
+    }
+  }
+}

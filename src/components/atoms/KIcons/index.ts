@@ -1,0 +1,9 @@
+export { default as SIconIdCard } from "./SIconIdCard";
+export { default as SIconGrid } from "./SIconGrid";
+export { default as SIconShop } from "./SIconShop";
+export { default as SIconBadge } from "./SIconBadge";
+export { default as SIconPaperPlaneRight } from "./SIconPaperPlaneRight";
+export { default as SIconCheckGreen } from "./SIconCheckGreen";
+export { default as SIconArrowsCounterClock } from "./SIconArrowsCounterClock";
+export { default as SIconPause } from "./SIconPause";
+export { default as SIconClock } from "./SIconClock";

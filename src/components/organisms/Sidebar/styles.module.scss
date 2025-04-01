@@ -1,0 +1,20 @@
+.menu {
+  border-inline-end: 0px !important;
+  padding: 0 12px !important;
+  :global {
+    .ant-menu-item {
+      padding-left: 12px !important;
+      margin: 0 !important;
+      margin-inline: 0px !important;
+      margin-block: 0px !important;
+      width: 100% !important;
+    }
+    .ant-menu-item-selected {
+      font-family: "Averta Std CY";
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 600;
+      line-height: 22px;
+    }
+  }
+}

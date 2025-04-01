@@ -1,0 +1,44 @@
+{
+  "name": "modi-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@ant-design/nextjs-registry": "^1.0.1",
+    "@apollo/client": "^3.11.4",
+    "@phosphor-icons/react": "^2.1.7",
+    "@reduxjs/toolkit": "^2.2.7",
+    "@spotlightjs/spotlight": "^2.9.0",
+    "apollo-upload-client": "17.0.0",
+    "clsx": "^2.1.1",
+    "cookies-next": "^4.3.0",
+    "dayjs": "^1.11.13",
+    "graphql": "^16.9.0",
+    "lodash": "^4.17.21",
+    "next": "14.2.5",
+    "next-nprogress-bar": "^2.3.13",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-redux": "^9.1.2",
+    "sass": "^1.77.8",
+    "tailwind-merge": "^2.5.4"
+  },
+  "devDependencies": {
+    "@types/apollo-upload-client": "17.0.0",
+    "@types/lodash": "^4.17.13",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "antd": "^5.20.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.9",
+    "typescript": "^5"
+  }
+}

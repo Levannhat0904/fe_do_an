@@ -1,0 +1,34 @@
+.container {
+  :global {
+    .ant-select-selector {
+      background: transparent !important;
+      border: none !important;
+      outline: none;
+      box-shadow: none !important;
+      width: calc(100% - 28px) !important;
+
+      .ant-select-selection-placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .ant-select-selection-item {
+        color: white;
+      }
+    }
+
+    .ant-select-arrow {
+      color: white !important;
+      right: 24px;
+      pointer-events: all;
+    }
+  }
+}
+
+.root {
+  :global {
+    .ant-select-status-error {
+      border-color: #ff4d4f !important;
+      border-width: 1px;
+    }
+  }
+}

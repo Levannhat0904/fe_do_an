@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_THIN.otf");
+    font-weight: 100;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_THIN_ITALIC.otf");
+    font-weight: 100;
+    font-display: swap;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_EXTRA_THIN.otf");
+    font-weight: 200;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_EXTRA_THIN_ITALIC.otf");
+    font-weight: 200;
+    font-display: swap;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_LIGHT.otf");
+    font-weight: 300;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_LIGHT_ITALIC.otf");
+    font-weight: 300;
+    font-display: swap;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_NORMAL.otf");
+    font-weight: 400;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_REGULAR_ITALIC.otf");
+    font-weight: 400;
+    font-display: swap;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_SEMIBOLD.otf");
+    font-weight: 600;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_SEMIBOLD_ITALIC.otf");
+    font-weight: 600;
+    font-display: swap;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_BOLD.otf");
+    font-weight: 700;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_BOLD_ITALIC.otf");
+    font-weight: 700;
+    font-display: swap;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_EXTRA_BOLD.otf");
+    font-weight: 800;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_EXTRA_BOLD_ITALIC.otf");
+    font-weight: 800;
+    font-display: swap;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_BLACK.otf");
+    font-weight: 900;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: "Averta Std CY";
+    src: url("/fonts/AVERTA_SDT_CY_BLACK_ITALIC.otf");
+    font-weight: 900;
+    font-display: swap;
+    font-style: italic;
+  }
+}
+
+/* custom checkbox table */
+.custom-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  @apply bg-black border-black !important;
+}
+
+.custom-checkbox .ant-checkbox-inner {
+  @apply border-black !important;
+}
+
+.custom-checkbox:hover .ant-checkbox-inner {
+  @apply border-gray-700 !important;
+}
+
+.custom-checkbox .ant-checkbox-input:focus + .ant-checkbox-inner {
+  @apply ring-2 ring-black !important;
+}
+
+/* custom panigation */
+
+/* Tùy chỉnh cho các nút số trang */
+.custom-pagination-number {
+  color: #000;
+  background-color: transparent;
+  border: none;
+  font-size: 14px;
+  min-width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.custom-pagination-number.active {
+  background-color: #F0F0F0; /* Màu nền xám nhạt cho trang hiện tại */
+  font-weight: 600;
+}
+
+/* Ghi đè cho thành phần Ant Design của trang hiện tại */
+:where(.css-dev-only-do-not-override-1807amk).ant-pagination .ant-pagination-item-active {
+  font-weight: 600;
+  background-color: #ffffff; /* Màu nền trắng cho trang hiện tại */
+  border: none !important; /* Loại bỏ viền */
+  outline: none; /* Xóa outline nếu có */
+}
+
+/* Đặt border thành không có viền khi hover */
+:where(.css-dev-only-do-not-override-1807amk).ant-pagination .ant-pagination-item-active:hover {
+  border-color: transparent; /* Xóa viền khi hover */
+}
+
+/* Tùy chỉnh cho nút Previous và Next */
+.custom-pagination-button {
+  color: #000;
+  background-color: transparent;
+  border: none;
+  font-size: 14px;
+  padding: 5px;
+  cursor: pointer;
+}
+
+/* Hiệu ứng hover cho các nút */
+.custom-pagination-button:hover,
+.custom-pagination-number:hover {
+  color: #d9d9d9; /* Màu khi hover */
+}
+
+/* Tùy chỉnh cho dropdown số dòng mỗi trang */
+.page-size-dropdown {
+  display: inline-block;
+  margin-left: 10px;
+}
+
+.page-size-select .ant-select-selector {
+  border: 1px solid #d9d9d9;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 2px 8px;
+}
+
+.page-size-select .ant-select-selection-item {
+  font-size: 14px;
+  color: #000;
+}
+
+.page-size-select .ant-select-arrow {
+  color: #000;
+}
