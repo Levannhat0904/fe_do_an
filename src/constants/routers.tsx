@@ -17,28 +17,23 @@ export const routers: MenuProps["items"] = [
     icon: <SIconGrid />,
   },
   {
-    label: "Quản lý đơn hàng",
-    key: "order-management",
+    label: "Quản lý sinh viên",
+    key: "quan-ly-sinh-vien",
     icon: <SIconGrid />,
   },
   {
-    label: "Quản lý đại lý",
-    key: "agent-management",
+    label: "Quản lý hợp đồng",
+    key: "quan-ly-hop-dong",
     icon: <SIconShop />,
   },
   {
-    label: "Quản lý đối tác bảo hiểm",
-    key: "insurance-partner-management",
+    label: "Quản lý phòng",
+    key: "quan-ly-phong",
     icon: <SIconBadge />,
   },
   {
-    label: "Quản lý đối tác dv đăng kiểm",
-    key: "inspection-partner-management",
+    label: "Quản lý hóa đơn",
+    key: "quan-ly-hoa-don",
     icon: <SIconIdCard />,
-  },
-  {
-    label: "Quản lý khách hàng",
-    key: "customer-management",
-    icon: <User />,
   },
 ];
