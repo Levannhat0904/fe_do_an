@@ -35,7 +35,7 @@ export const colors = {
   black50: "#1A1A1A",
 
   // Primary Colors
-  primary6: "#DD9E38",
+  primary6: "#fe9a00",
 
   // Green Variants
   green1: "rgba(18, 213, 131, 0.80)",

@@ -139,3 +139,9 @@ export enum IconWeight {
   regular = "regular",
   thin = "thin",
 }
+export enum userRole {
+  super_admin = "super_admin",
+  admin = "admin",
+  student = "student",
+  undefined = "undefined",
+}
