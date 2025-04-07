@@ -12,6 +12,7 @@ import {
 } from "@/constants";
 import styles from "./styles.module.scss";
 import { usePagination } from "@/hooks/common/usePagination";
+import clsx from "clsx";
 
 interface DataTableProps<T> extends Omit<TableProps<T>, "pagination"> {
   pagination?: TPaginationResponse;
