@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function UserProfileMenu() {
   const { adminProfile } = useAuth();
+  console.log("adminProfilesdsdsds", adminProfile);
 
   return (
     <Popover content={UserActionMenu} trigger="click">
@@ -28,11 +29,13 @@ export default function UserProfileMenu() {
               weight={ICON_WEIGHT_DEFAULT}
             />
           }
-          src={adminProfile?.viewableAvatar}
+          src={adminProfile?.profile.avatarPath}
         />
         <div className="flex flex-col">
-          <KText className="sbody-semibold">{adminProfile?.fullName}</KText>
-          <KText className="sbody-code">{adminProfile?.role}</KText>
+          <KText className="sbody-semibold">
+            {adminProfile?.profile.fullName}
+          </KText>
+          <KText className="sbody-code ">{adminProfile?.profile.role}</KText>
         </div>
         <CaretDown size={ICON_SIZE_DEFAULT} weight={ICON_WEIGHT_DEFAULT} />
       </Space>

@@ -11,15 +11,6 @@ const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
 
 export function LayoutProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
-
-  // const {
-  //   loading: provincesLoading,
-  //   data: provinces,
-  //   refetch: refetchProvinces,
-  //   loadMore: loadMoreProvinces,
-  //   hasMore: hasMoreProvinces,
-  // } = useFetchProvince();
-
   const toggleCollapsed = () => {
     setCollapsed((prev) => !prev);
   };

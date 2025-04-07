@@ -2,7 +2,6 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
-import { ApolloProvider } from "@apollo/client";
 import { ConfigProvider } from "antd";
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -10,13 +9,14 @@ import { DisclosureProvider } from "@/contexts/DisclosureContext";
 import { MenuProvider } from "@/contexts/MenuContext";
 import { MainLayout } from "@/components/layouts";
 import { AUTH_ROUTES, colors, Routers } from "@/constants";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 type Props = {
   children: React.ReactNode;
 };
 
 export default function RootLayout({ children }: Props) {
-  // const client = useApolloClient();
+  const queryClient = new QueryClient();
 
   const pathname = usePathname();
 
@@ -36,19 +36,19 @@ export default function RootLayout({ children }: Props) {
         },
       }}
     >
-      {/* <ApolloProvider client={client}> */}
-      <AuthProvider>
-        <MenuProvider>
-          <DisclosureProvider>{renderLayout()}</DisclosureProvider>
-        </MenuProvider>
-      </AuthProvider>
-      <ProgressBar
-        height="4px"
-        color="black"
-        options={{ showSpinner: false }}
-        shallowRouting
-      />
-      {/* </ApolloProvider> */}
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <MenuProvider>
+            <DisclosureProvider>{renderLayout()}</DisclosureProvider>
+          </MenuProvider>
+        </AuthProvider>
+        <ProgressBar
+          height="4px"
+          color="black"
+          options={{ showSpinner: false }}
+          shallowRouting
+        />
+      </QueryClientProvider>
     </ConfigProvider>
   );
 }

@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 
 const StudentPageContent = dynamic(
-  () => import("@/components/pages/studentPage/studentListPage"),
+  () => import("@/components/pages/studentPage"),
   {
     ssr: false,
   }

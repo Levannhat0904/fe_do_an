@@ -7,10 +7,10 @@ import { MenuOutlined } from "@ant-design/icons";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useMenu } from "@/contexts/MenuContext";
 import { KLogoSidebar } from "@/components/atoms";
-import { routers } from "@/constants";
-
+import { getRoutersByUserRole } from "@/constants/routers";
+import { userRole } from "@/constants/enums";
 import styles from "./styles.module.scss";
-
+import { useCurrentSession } from "@/api/auth";
 const { Sider } = Layout;
 
 export default function Sidebar() {
@@ -18,7 +18,8 @@ export default function Sidebar() {
   const { collapsed } = useLayout();
   const { activeKey, setActiveKey } = useMenu();
   const [drawerVisible, setDrawerVisible] = useState(false);
-
+  const { data: profile, isPending } = useCurrentSession();
+  console.log("profiless", profile?.data?.profile?.role);
   const onMenuSelect = (info: any) => {
     router.push(info.key);
     setActiveKey(info.key);
@@ -30,7 +31,11 @@ export default function Sidebar() {
       className={`${styles.menu} !bg-neutral9`}
       theme="light"
       mode="inline"
-      items={routers}
+      items={getRoutersByUserRole(
+        isPending
+          ? userRole.undefined
+          : (profile?.data?.profile?.role as userRole) || userRole.student
+      )}
       onClick={onMenuSelect}
       selectedKeys={[activeKey]}
     />

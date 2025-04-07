@@ -1,24 +1,11 @@
-import { KTX_ADMIN_ACCESS_TOKEN } from "@/constants";
-import { useQuery } from "@apollo/client";
-import { getCookie } from "cookies-next";
-
+import { useCurrentSession } from "@/api/auth";
 const useFetchProfile = () => {
-  const accessToken = getCookie(KTX_ADMIN_ACCESS_TOKEN);
-  // const { loading, error, data, refetch } = useQuery(ADMIN_SESSION_CURRENT, {
-  //   skip: !accessToken,
-  // });
-
-  // return {
-  //   loading,
-  //   error,
-  //   data: data && data[GraphqlKey.current],
-  //   refetch,
-  // };
+  const { isPending, error, data, refetch } = useCurrentSession();
   return {
-    loading: false,
-    error: null,
-    data: null,
-    refetch: () => { },
+    loading: isPending,
+    error,
+    data: data && data.data,
+    refetch,
   };
 };
 
