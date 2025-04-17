@@ -1,358 +1,285 @@
-import React from "react";
-import StudentTable from "./components/StudentTable";
+"use client";
+import React, { useState, useCallback } from "react";
+
+import { Table, Tag, Space, Input, Alert, Button, Modal, Tooltip } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import {
+  SearchOutlined,
+  EditOutlined,
+  EyeOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
+import { FACULTY_OPTIONS, MAJOR_OPTIONS } from "@/constants/values";
+import debounce from "lodash/debounce";
+import { useRouter } from "next/navigation";
+import { useGetStudents } from "@/api/student";
+interface StudentData {
+  id: number;
+  studentCode: string;
+  fullName: string;
+  gender: string;
+  birthDate: string;
+  phone: string;
+  email: string;
+  faculty: string;
+  major: string;
+  className: string;
+  status: string;
+  avatarPath?: string;
+}
+
+interface StudentListResponse {
+  data: StudentData[];
+  pagination: {
+    currentPage: number;
+    itemsPerPage: number;
+    totalItems: number;
+    totalPages: number;
+  };
+  success: boolean;
+}
+
+const getColumnSearchProps = (dataIndex: keyof StudentData) => ({
+  filterDropdown: ({
+    setSelectedKeys,
+    selectedKeys,
+    confirm,
+    clearFilters,
+  }: any) => (
+    <div style={{ padding: 8 }}>
+      <Input
+        placeholder={`Tìm ${dataIndex}`}
+        value={selectedKeys[0]}
+        onChange={(e) =>
+          setSelectedKeys(e.target.value ? [e.target.value] : [])
+        }
+        onPressEnter={() => confirm()}
+        style={{ width: 188, marginBottom: 8, display: "block" }}
+      />
+      <Space>
+        <Button
+          type="primary"
+          onClick={() => confirm()}
+          icon={<SearchOutlined />}
+          size="small"
+        >
+          Tìm
+        </Button>
+        <Button onClick={() => clearFilters()} size="small">
+          Đặt lại
+        </Button>
+      </Space>
+    </div>
+  ),
+  filterIcon: (filtered: boolean) => (
+    <SearchOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
+  ),
+  onFilter: (value: any, record: StudentData) =>
+    record[dataIndex]
+      ?.toString()
+      .toLowerCase()
+      .includes((value as string).toLowerCase()) || false,
+});
 
 const StudentPage = () => {
-  const fakeStudents = [
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [searchText, setSearchText] = useState("");
+  const { data, isLoading } = useGetStudents(page, limit, searchText);
+  const [error, setError] = useState<string | null>(null);
+  const [modal, contextHolder] = Modal.useModal();
+  const router = useRouter();
+  const debouncedSearch = useCallback(
+    debounce((value: string) => {
+      setSearchText(value);
+      setPage(1); // Reset to first page when searching
+    }, 500),
+    []
+  );
+
+  const handleSearch = (value: string) => {
+    debouncedSearch(value);
+  };
+
+  const handleViewDetail = (id: number) => {
+    router.push(`/quan-ly-sinh-vien/${id}`);
+  };
+
+  const columns: ColumnsType<StudentData> = [
     {
-      id: 1,
-      user_id: 101,
-      student_code: "ST001",
-      full_name: "John Doe",
-      gender: "male",
-      birth_date: "2000-01-15",
-      phone: "0123456789",
-      address: "123 Main Street",
-      province: "Province A",
-      district: "District 1",
-      ward: "Ward X",
-      department: "Computer Science",
-      major: "Software Engineering",
-      class_name: "SE2023A",
-      school_year: 2023,
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789012",
-      emergency_contact_name: "Jane Doe",
-      emergency_contact_phone: "0987654321",
-      emergency_contact_relationship: "Parent",
-      status: "active",
+      title: "MSSV",
+      dataIndex: "studentCode",
+      key: "studentCode",
+      fixed: "left",
+      width: 100,
+      sorter: true,
+      ...getColumnSearchProps("studentCode"),
     },
     {
-      id: 2,
-      user_id: 102,
-      student_code: "ST002",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
-      status: "active",
+      title: "Họ và tên",
+      dataIndex: "fullName",
+      key: "fullName",
+      width: 200,
+      sorter: true,
+      ...getColumnSearchProps("fullName"),
     },
     {
-      id: 3,
-      user_id: 103,
-      student_code: "ST003",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
-      status: "active",
+      title: "Giới tính",
+      dataIndex: "gender",
+      key: "gender",
+      width: 100,
+      filters: [
+        { text: "Nam", value: "male" },
+        { text: "Nữ", value: "female" },
+      ],
+      onFilter: (value: boolean | React.Key, record) => record.gender === value,
+      render: (gender: string) => (
+        <Tag color={gender === "male" ? "blue" : "pink"}>
+          {gender === "male" ? "Nam" : "Nữ"}
+        </Tag>
+      ),
     },
     {
-      id: 4,
-      user_id: 104,
-      student_code: "ST004",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Ngày sinh",
+      dataIndex: "birthDate",
+      key: "birthDate",
+      width: 120,
+      sorter: true,
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
     },
     {
-      id: 5,
-      user_id: 105,
-      student_code: "ST005",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Số điện thoại",
+      dataIndex: "phone",
+      key: "phone",
+      width: 120,
+      sorter: true,
+      ...getColumnSearchProps("phone"),
     },
     {
-      id: 6,
-      user_id: 106,
-      student_code: "ST006",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      width: 200,
+      sorter: true,
+      ...getColumnSearchProps("email"),
     },
     {
-      id: 7,
-      user_id: 107,
-      student_code: "ST007",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Lớp",
+      dataIndex: "className",
+      key: "className",
+      width: 100,
+      sorter: true,
+      ...getColumnSearchProps("className"),
     },
     {
-      id: 8,
-      user_id: 108,
-      student_code: "ST008",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Khoa",
+      dataIndex: "faculty",
+      key: "faculty",
+      width: 150,
+      filters: FACULTY_OPTIONS.map((f) => ({ text: f.label, value: f.value })),
+      onFilter: (value: boolean | React.Key, record) =>
+        record.faculty === value,
     },
     {
-      id: 9,
-      user_id: 109,
-      student_code: "ST009",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Chuyên ngành",
+      dataIndex: "major",
+      key: "major",
+      width: 150,
+      filters: Object.values(MAJOR_OPTIONS)
+        .flat()
+        .map((m) => ({ text: m.label, value: m.value })),
+      onFilter: (value: boolean | React.Key, record) => record.major === value,
     },
     {
-      id: 10,
-      user_id: 110,
-      student_code: "ST010",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      filters: [
+        { text: "Chờ duyệt", value: "pending" },
+        { text: "Đã duyệt", value: "approved" },
+      ],
+      onFilter: (value: boolean | React.Key, record) => record.status === value,
+      render: (status: string) => (
+        <Tag color={status === "pending" ? "orange" : "green"}>
+          {status === "pending" ? "Chờ duyệt" : "Đã duyệt"}
+        </Tag>
+      ),
     },
     {
-      id: 11,
-      user_id: 111,
-      student_code: "ST011",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
-    },
-    {
-      id: 12,
-      user_id: 112,
-      student_code: "ST012",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
-    },
-    {
-      id: 13,
-      user_id: 113,
-      student_code: "ST013",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
-    },
-    {
-      id: 14,
-      user_id: 114,
-      student_code: "ST014",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
-    },
-    {
-      id: 15,
-      user_id: 115,
-      student_code: "ST015",
-      full_name: "Alice Smith",
-      gender: "female",
-      birth_date: "2001-03-20",
-      phone: "0123456788",
-      address: "456 Oak Avenue",
-      province: "Province B",
-      district: "District 2",
-      ward: "Ward Y",
-      department: "Computer Science",
-      major: "Data Science",
-      class_name: "DS2023A",
-      school_year: 2023,
-      status: "active",
-      avatar_path: "/avatars/default.png",
-      citizen_id: "123456789013",
-      emergency_contact_name: "Bob Smith",
-      emergency_contact_phone: "0987654322",
-      emergency_contact_relationship: "Parent",
+      title: "Thao tác",
+      key: "action",
+      fixed: "right",
+      align: "center",
+      width: 100,
+      render: (_, record) => (
+        <Space size="middle">
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewDetail(record.id)}
+            />
+          </Tooltip>
+        </Space>
+      ),
     },
   ];
 
   return (
-    <div>
-      <StudentTable data={fakeStudents} />
+    <div className="p-6">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">Quản lý sinh viên</h1>
+        <Input.Search
+          placeholder="Tìm kiếm..."
+          allowClear
+          style={{ width: 300 }}
+          onSearch={handleSearch}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
+      </div>
+
+      {error && (
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          className="mb-4"
+        />
+      )}
+
+      <Table
+        columns={columns}
+        dataSource={data?.data}
+        loading={isLoading}
+        rowKey="id"
+        scroll={{ x: 1500 }}
+        pagination={{
+          current: data?.pagination?.currentPage,
+          pageSize: data?.pagination?.itemsPerPage,
+          total: data?.pagination?.totalItems,
+          showSizeChanger: true,
+          showQuickJumper: true,
+        }}
+        onChange={(pagination, filters, sorter) => {
+          setPage(pagination.current || 1);
+          setLimit(pagination.pageSize || 10);
+
+          // Handle sorting
+          if (sorter && "field" in sorter) {
+            console.log("Sort by:", sorter.field, sorter.order);
+          }
+
+          // Handle filters
+          if (filters) {
+            console.log("Filters:", filters);
+          }
+        }}
+      />
+      {contextHolder}
     </div>
   );
 };

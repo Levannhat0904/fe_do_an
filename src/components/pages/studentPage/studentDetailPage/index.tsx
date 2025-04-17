@@ -1,262 +1,366 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import {
   Card,
-  Avatar,
-  Tag,
-  Descriptions,
-  Row,
-  Col,
-  Typography,
   Button,
-  Drawer,
-  Space,
-  message,
+  Tabs,
+  Tag,
+  Spin,
+  Modal,
   Form,
+  Input,
+  notification,
+  Timeline,
+  Dropdown,
 } from "antd";
 import {
   UserOutlined,
-  PhoneOutlined,
   HomeOutlined,
-  IdcardOutlined,
-  CalendarOutlined,
-  BookOutlined,
-  ArrowLeftOutlined,
-  MailOutlined,
-  EditOutlined,
+  HistoryOutlined,
+  DownOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { useParams, useRouter } from "next/navigation";
-import EditStudentForm from "./components/EditStudentForm";
-import DrawerEditStudent from "@/components/organisms/DrawerEditStudent";
-const { Title } = Typography;
-
-interface StudentDetailProps {
-  student?: {
-    id: number;
-    user_id: number;
-    student_code: string;
-    full_name: string;
-    gender: string;
-    birth_date: string;
-    phone: string;
-    address: string;
-    province: string;
-    district: string;
-    ward: string;
-    department: string;
-    major: string;
-    class_name: string;
-    school_year: number;
-    avatar_path: string;
-    citizen_id: string;
-    emergency_contact_name: string;
-    emergency_contact_phone: string;
-    emergency_contact_relationship: string;
-    status: string;
-  };
-}
-
-const StudentDetailPage: React.FC<StudentDetailProps> = () => {
-  const router = useRouter();
+import { API_URL } from "@/constants/values";
+import {
+  useGetStudentById,
+  useActiveStudent,
+  useRejectStudent,
+} from "@/api/student";
+import { StudentStatusEnum } from "@/constants/enums";
+import { Student, Dormitory, History, Roommate } from "@/types/student";
+import StudentInfo from "./components/StudentInfo";
+import StudentStatus from "./components/StudentStatus";
+import Image from "next/image";
+import StudentAction from "./components/StudentAction";
+import FormEditRoom from "./components/FormEditRoom";
+import DormitoryInfo from "./components/DormitoryInfor";
+import RoommateInfo from "./components/RoommateInfo";
+import dayjs from "dayjs";
+import HistoryTimeline from "./components/HistoryTimeline";
+const StudentDormitoryDetail = () => {
   const params = useParams();
-  const studentId = params.id;
-  console.log("studentId", studentId);
-  const [openDrawerEditStudent, setOpenDrawerEditStudent] = useState(false);
-  const [studentDetail, setStudentDetail] = useState<any>(null);
+  const id = parseInt(params.id as string);
+  const { data: student, isLoading, error, refetch } = useGetStudentById(id);
+  const [modal, contextHolder] = Modal.useModal();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("info");
+  const [showActiveStudentModal, setShowActiveStudentModal] = useState(false);
+  const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [form] = Form.useForm();
+  const {
+    mutate: activeStudent,
+    isPending: isActiveStudentLoading,
+    isSuccess: isActiveStudentSuccess,
+    isError: isActiveStudentError,
+  } = useActiveStudent(String(student?.id));
+  const {
+    mutate: rejectStudent,
+    isPending: isRejectStudentLoading,
+    isSuccess: isRejectStudentSuccess,
+    isError: isRejectStudentError,
+  } = useRejectStudent(String(student?.id));
 
-  // TODO: get student detail from api
-  // const getStudentDetail = async () => {
-  //   const response = await axios.get(`/api/students/${studentId}`);
-  //   setStudentDetail(response.data);
-  // };
-  // Fake data for demo - remove this when you have real data
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
-  const student = {
-    id: 1,
-    user_id: 101,
-    student_code: "ST001",
-    full_name: "John Doe",
-    gender: "male",
-    birth_date: "2000-01-15",
-    phone: "0123456789",
-    address: "123 Main Street",
-    province: "Province A",
-    district: "District 1",
-    ward: "Ward X",
-    department: "Computer Science",
-    major: "Software Engineering",
-    class_name: "SE2023A",
-    school_year: 2023,
-    avatar_path: "/avatars/default.png",
-    citizen_id: "123456789012",
-    emergency_contact_name: "Jane Doe",
-    emergency_contact_phone: "0987654321",
-    emergency_contact_relationship: "Parent",
-    status: "active",
+  if (error) {
+    return (
+      <div className="p-6">
+        <Card>
+          <div className="text-center text-red-500">
+            <ExclamationCircleOutlined className="text-4xl mb-4" />
+            <h2 className="text-xl">
+              Đã xảy ra lỗi khi tải thông tin sinh viên
+            </h2>
+            {/* <p>{error}</p> */}
+            <Button
+              type="primary"
+              className="mt-4"
+              onClick={() => router.push("/quan-ly-ky-tuc-xa")}
+            >
+              Quay lại danh sách
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+  const dormitory = {} as Dormitory;
+  const history = [
+    // fake data
+    {
+      id: 1,
+      description: "Đăng ký ký túc xá",
+      date: "2024-01-01",
+      user: "Nguyễn Văn A",
+    },
+    {
+      id: 2,
+      description: "Đăng ký ký túc xá",
+      date: "2024-01-01",
+      user: "Nguyễn Văn A",
+    },
+    {
+      id: 3,
+      description: "Đăng ký ký túc xá",
+      date: "2024-01-01",
+      user: "Nguyễn Văn A",
+    },
+  ];
+  const roommates = [
+    {
+      id: 1,
+      studentCode: "1234567890",
+      fullName: "Nguyễn Văn A",
+      gender: "male",
+      status: "pending",
+    },
+    {
+      id: 2,
+      studentCode: "1234567890",
+      fullName: "Nguyễn Văn A",
+      gender: "male",
+      status: "pending",
+    },
+    {
+      id: 3,
+      studentCode: "1234567890",
+      fullName: "Nguyễn Văn A",
+      gender: "male",
+      status: "pending",
+    },
+  ];
+
+  const handleActiveStudent = () => {
+    setShowActiveStudentModal(true);
   };
+  const { confirm } = Modal;
+
+  const confirmApproval = () => {
+    confirm({
+      title: "Xác nhận phê duyệt",
+      content: `Bạn có chắc chắn muốn phê duyệt đơn đăng ký ký túc xá của sinh viên ${student?.fullName}?`,
+      onOk: () => {
+        return new Promise((resolve, reject) => {
+          activeStudent(undefined, {
+            onSuccess: () => {
+              notification.success({
+                message: "Phê duyệt thành công",
+                description: `Đã phê duyệt đăng ký ký túc xá cho sinh viên ${student?.fullName}`,
+              });
+              refetch();
+              resolve(true);
+            },
+            onError: (error) => {
+              notification.error({
+                message: "Lỗi",
+                description: "Đã xảy ra lỗi khi phê duyệt đăng ký ký túc xá",
+              });
+              reject(false);
+            },
+          });
+        });
+      },
+    });
+  };
+
+  const handleRejectStudent = () => {
+    setShowRejectStudentModal(true);
+  };
+
+  const confirmReject = () => {
+    confirm({
+      title: "Xác nhận từ chối",
+      content: `Bạn có chắc chắn muốn từ chối đơn đăng ký ký túc xá của sinh viên ${student?.fullName}?`,
+      onOk: () => {
+        return new Promise((resolve, reject) => {
+          rejectStudent(undefined, {
+            onSuccess: () => {
+              notification.success({
+                message: "Từ chối thành công",
+                description: `Đã từ chối đăng ký ký túc xá cho sinh viên ${student?.fullName}`,
+              });
+              refetch();
+              resolve(true);
+            },
+            onError: (error) => {
+              notification.error({
+                message: "Lỗi",
+                description: "Đã xảy ra lỗi khi từ chối đăng ký ký túc xá",
+              });
+              reject(false);
+            },
+          });
+        });
+      },
+    });
+  };
+
+  const handleEdit = () => {
+    form.setFieldsValue({
+      buildingName: dormitory.buildingName,
+      roomNumber: dormitory.roomNumber,
+      bedNumber: dormitory.bedNumber,
+      semester: dormitory.semester,
+      schoolYear: dormitory.schoolYear,
+    });
+    Modal.confirm({
+      title: "Chỉnh sửa thông tin phòng ở",
+      width: 600,
+      content: <FormEditRoom form={form} student={student!} />,
+      onOk: () => {
+        const values = form.getFieldsValue();
+        // Gọi API cập nhật thông tin
+        notification.success({
+          message: "Cập nhật thành công",
+          description: "Đã cập nhật thông tin phòng ở của sinh viên",
+        });
+      },
+    });
+  };
+
+  const handlePrint = () => {
+    notification.info({
+      message: "Đang in...",
+      description: "Đang chuẩn bị tài liệu để in",
+    });
+  };
+
+  const handleBack = () => {
+    router.push("/quan-ly-sinh-vien");
+  };
+
+  const timelineItems = history.map((item) => ({
+    children: (
+      <div>
+        <p className="font-semibold">{item.description}</p>
+        <p className="text-sm text-gray-500">
+          {dayjs(item.date).format("DD/MM/YYYY HH:mm")} - {item.user}
+        </p>
+      </div>
+    ),
+    color:
+      item.action === "register"
+        ? "blue"
+        : item.action === "payment"
+        ? "green"
+        : "gray",
+  }));
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
-      {/* Header Actions */}
-      <div className="flex justify-between items-center mb-6">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
-          Quay lại
-        </Button>
-        <Button
-          type="primary"
-          icon={<EditOutlined />}
-          onClick={() => setOpenDrawerEditStudent(true)}
-        >
-          Chỉnh sửa
-        </Button>
-      </div>
-
-      {/* Header Section */}
-      <Card className="mb-6 shadow-md">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-          <Avatar
-            size={120}
-            src={student.avatar_path}
-            icon={<UserOutlined />}
-            className="shadow-lg"
-          />
-          <div className="text-center md:text-left">
-            <Title level={3} className="mb-2">
-              {student.full_name}
-            </Title>
-            <div className="space-y-2">
-              <Tag color="blue" icon={<IdcardOutlined />}>
-                {student.student_code}
-              </Tag>
-              <Tag color={student.status === "active" ? "green" : "red"}>
-                {student.status.toUpperCase()}
-              </Tag>
+    <div className="p-6">
+      <Card className="mb-6">
+        <div className="flex md:flex-row flex-col justify-between items-center mb-6">
+          <div className="flex items-center">
+            <div className="bg-blue-50 rounded-full mr-4">
+              <div className="w-16 h-16">
+                {student?.avatarPath ? (
+                  <Image
+                    src={`${API_URL}${student?.avatarPath}`}
+                    alt="avatar"
+                    width={64}
+                    height={64}
+                    className="rounded-full aspect-square object-contain w-full h-full"
+                  />
+                ) : (
+                  <UserOutlined className="text-4xl text-blue-500" />
+                )}
+              </div>
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold">{student?.fullName}</h1>
+              <p className="text-gray-500">
+                {student?.studentCode} | {student?.className}
+              </p>
             </div>
           </div>
+          <div className="flex flex-col items-end">
+            <div className="text-lg mb-2 flex items-center">
+              <span className="mr-2">Trạng thái:</span>
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: StudentStatusEnum.active,
+                      label: "Phê duyệt",
+                      onClick: () => confirmApproval(),
+                    },
+                    {
+                      key: StudentStatusEnum.inactive,
+                      label: "Từ chối",
+                      onClick: () => confirmReject(),
+                    },
+                    {
+                      key: StudentStatusEnum.pending,
+                      label: "Chờ duyệt",
+                      disabled: student?.status === StudentStatusEnum.pending,
+                    },
+                  ],
+                }}
+                trigger={["click"]}
+              >
+                <div className="cursor-pointer flex items-center gap-2 hover:opacity-80">
+                  <StudentStatus status={student?.status} />
+                  <DownOutlined className="text-sm" />
+                </div>
+              </Dropdown>
+            </div>
+            <StudentAction
+              student={student!}
+              handleEdit={handleEdit}
+              handlePrint={handlePrint}
+              handleBack={handleBack}
+              loading={isActiveStudentLoading || isRejectStudentLoading}
+            />
+          </div>
         </div>
+
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: "info",
+              label: "Thông tin sinh viên",
+              icon: <UserOutlined />,
+              children: <StudentInfo student={student!} />,
+            },
+            {
+              key: "dormitory",
+              icon: <HomeOutlined />,
+              label: "Thông tin ký túc xá",
+              children: (
+                <DormitoryInfo student={student!} dormitory={dormitory} />
+              ),
+            },
+            {
+              key: "roommates",
+              label: "Bạn cùng phòng",
+              icon: <UserOutlined />,
+              children: (
+                <RoommateInfo dormitory={dormitory} roommates={roommates} />
+              ),
+            },
+            {
+              key: "history",
+              label: "Lịch sử hoạt động",
+              icon: <HistoryOutlined />,
+              children: <HistoryTimeline timelineItems={timelineItems} />,
+            },
+          ]}
+        />
       </Card>
 
-      {/* Information Grid */}
-      <Row gutter={[16, 16]} className="[&>div]:flex mt-10">
-        {/* Personal Information */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <span className="flex items-center gap-2">
-                <UserOutlined />
-                Thông tin cá nhân
-              </span>
-            }
-            className="shadow-md w-full"
-          >
-            <Descriptions column={1} layout="horizontal" className="h-full">
-              <Descriptions.Item label="Giới tính">
-                {student.gender === "male" ? "Nam" : "Nữ"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày sinh">
-                {new Date(student.birth_date).toLocaleDateString("vi-VN")}
-              </Descriptions.Item>
-              <Descriptions.Item label="CMND/CCCD">
-                {student.citizen_id}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {student.phone}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-
-        {/* Academic Information */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <span className="flex items-center gap-2">
-                <BookOutlined />
-                Thông tin học tập
-              </span>
-            }
-            className="shadow-md w-full"
-          >
-            <Descriptions column={1} className="h-full">
-              <Descriptions.Item label="Khoa">
-                {student.department}
-              </Descriptions.Item>
-              <Descriptions.Item label="Chuyên ngành">
-                {student.major}
-              </Descriptions.Item>
-              <Descriptions.Item label="Lớp">
-                {student.class_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Niên khóa">
-                {student.school_year}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-
-        {/* Address Information */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <span className="flex items-center gap-2">
-                <HomeOutlined />
-                Thông tin địa chỉ
-              </span>
-            }
-            className="shadow-md w-full"
-          >
-            <Descriptions column={1} className="h-full">
-              <Descriptions.Item label="Địa chỉ">
-                {student.address}
-              </Descriptions.Item>
-              <Descriptions.Item label="Phường/Xã">
-                {student.ward}
-              </Descriptions.Item>
-              <Descriptions.Item label="Quận/Huyện">
-                {student.district}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tỉnh/Thành phố">
-                {student.province}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-
-        {/* Emergency Contact */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <span className="flex items-center gap-2">
-                <PhoneOutlined />
-                Thông tin liên hệ khẩn cấp
-              </span>
-            }
-            className="shadow-md w-full"
-          >
-            <Descriptions column={1} className="h-full">
-              <Descriptions.Item label="Họ tên">
-                {student.emergency_contact_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {student.emergency_contact_phone}
-              </Descriptions.Item>
-              <Descriptions.Item label="Mối quan hệ">
-                {student.emergency_contact_relationship}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Edit Drawer */}
-      <DrawerEditStudent
-        open={openDrawerEditStudent}
-        onClose={() => setOpenDrawerEditStudent(false)}
-        student={student}
-      />
+      {/* {contextHolder} */}
     </div>
   );
 };
 
-export default StudentDetailPage;
+export default StudentDormitoryDetail;

@@ -180,3 +180,4 @@ export const generateRandomSixDigits = () => {
 export const getIsPhoneNumberValidated = (phoneNumber: string) => {
   return phoneRegex.test(phoneNumber || "");
 }
+

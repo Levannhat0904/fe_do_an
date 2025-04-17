@@ -4,13 +4,12 @@ import { Table, Button, Drawer, message, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined } from "@ant-design/icons";
 import RegisterForm from "./components/DormitoryRegistration/DormitoryRegistrationForm";
-import { DormitoryRegistration } from "@/types/dormitoryRegistration";
 import { dormitoryRegistrationService } from "@/services/dormitoryRegistration";
 
 const RegisterDormitoryPage: React.FC = () => {
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<DormitoryRegistration[]>([]);
+  const [data, setData] = useState<Dormitory[]>([]);
 
   const fetchData = async () => {
     try {
@@ -28,7 +27,7 @@ const RegisterDormitoryPage: React.FC = () => {
     fetchData();
   }, []);
 
-  const columns: ColumnsType<DormitoryRegistration> = [
+  const columns: ColumnsType<Dormitory> = [
     {
       title: "Registration Number",
       dataIndex: "registration_number",
@@ -124,7 +123,7 @@ const RegisterDormitoryPage: React.FC = () => {
         </Button>
       </div>
 
-      <Table<DormitoryRegistration>
+      <Table<Dormitory>
         columns={columns}
         dataSource={data}
         rowKey="id"

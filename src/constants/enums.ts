@@ -145,3 +145,9 @@ export enum userRole {
   student = "student",
   undefined = "undefined",
 }
+export enum StudentStatusEnum {
+  active = "active",
+  inactive = "inactive",
+  pending = "pending",
+  blocked = "blocked",
+}

@@ -4,12 +4,11 @@ import { Table, Button, Drawer, Space, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined } from "@ant-design/icons";
 import DormitoryRegistrationForm from "./DormitoryRegistrationForm";
-import { DormitoryRegistration } from "@/types/dormitoryRegistration";
 
 const DormitoryRegistrationTable: React.FC = () => {
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
 
-  const columns: ColumnsType<DormitoryRegistration> = [
+  const columns: ColumnsType<Dormitory> = [
     {
       title: "Registration Number",
       dataIndex: "registration_number",
@@ -68,7 +67,7 @@ const DormitoryRegistrationTable: React.FC = () => {
         </Button>
       </div>
 
-      <Table<DormitoryRegistration>
+      <Table<Dormitory>
         columns={columns}
         // Add your data source here
         // dataSource={dormitoryRegistrations}

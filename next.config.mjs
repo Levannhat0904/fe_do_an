@@ -3,6 +3,16 @@ const nextConfig = {
   reactStrictMode: false,
   skipTrailingSlashRedirect: true,
   productionBrowserSourceMaps: true,
+  images: {
+    remotePatterns: [
+      {
+        hostname: "localhost",
+        protocol: "http",
+        port: "3000",
+        pathname: "/**",
+      },
+    ],
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.devtool = "source-map";

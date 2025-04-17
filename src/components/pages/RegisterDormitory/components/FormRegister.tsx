@@ -19,11 +19,20 @@ import {
   UserOutlined,
   PhoneOutlined,
   MailOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import KButton from "@/components/atoms/KButton";
 import { useCreateStudentRegistration } from "@/api/student";
 import { UploadFile } from "antd/es/upload/interface";
+import {
+  useGetProvinces,
+  Province,
+  Ward,
+  District,
+} from "@/api/administrative";
+import { useGetDistricts, useGetWards } from "@/api/administrative";
+import { FACULTY_OPTIONS, MAJOR_OPTIONS } from "@/constants/values";
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -31,8 +40,14 @@ const StudentForm = () => {
   const { mutate: createStudentRegistration, isPending } =
     useCreateStudentRegistration();
   const [form] = Form.useForm();
+  const { data: provinces } = useGetProvinces();
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [selectedProvince, setSelectedProvince] = useState<number>();
+  const [selectedDistrict, setSelectedDistrict] = useState<number>();
+  const { data: districts } = useGetDistricts(selectedProvince!);
+  const { data: wards } = useGetWards(selectedProvince!, selectedDistrict!);
+  const [selectedFaculty, setSelectedFaculty] = useState<string>();
 
   const onFinish = (values: any) => {
     setLoading(true);
@@ -73,6 +88,34 @@ const StudentForm = () => {
       return false;
     },
     fileList,
+  };
+
+  const handleProvinceChange = (value: number) => {
+    setSelectedProvince(value);
+    setSelectedDistrict(undefined);
+    form.setFieldsValue({
+      district: undefined,
+      ward: undefined,
+    });
+  };
+
+  const handleDistrictChange = (value: number) => {
+    setSelectedDistrict(value);
+    form.setFieldsValue({
+      ward: undefined,
+    });
+  };
+
+  const handleFacultyChange = (value: string) => {
+    setSelectedFaculty(value);
+    form.setFieldsValue({
+      major: undefined,
+    });
+  };
+
+  // Thêm hàm filterOption chung cho tất cả các Select
+  const filterOption = (input: string, option?: { children: string }) => {
+    return (option?.children || "").toLowerCase().includes(input.toLowerCase());
   };
 
   return (
@@ -215,10 +258,18 @@ const StudentForm = () => {
                   { required: true, message: "Vui lòng chọn tỉnh/thành phố!" },
                 ]}
               >
-                <Select placeholder="Chọn tỉnh/thành phố">
-                  <Option value="hanoi">Hà Nội</Option>
-                  <Option value="hcm">TP. Hồ Chí Minh</Option>
-                  {/* Thêm các tỉnh thành khác */}
+                <Select
+                  showSearch
+                  placeholder="Chọn tỉnh/thành phố"
+                  onChange={handleProvinceChange}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {provinces?.map((province: Province) => (
+                    <Option key={province.code} value={province.code}>
+                      {province.name}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -231,10 +282,19 @@ const StudentForm = () => {
                   { required: true, message: "Vui lòng chọn quận/huyện!" },
                 ]}
               >
-                <Select placeholder="Chọn quận/huyện">
-                  <Option value="thanhxuan">Thanh Xuân</Option>
-                  <Option value="caugiay">Cầu Giấy</Option>
-                  {/* Thêm các quận huyện khác */}
+                <Select
+                  showSearch
+                  placeholder="Chọn quận/huyện"
+                  disabled={!selectedProvince}
+                  onChange={handleDistrictChange}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {districts?.data?.map((district: District) => (
+                    <Option key={district.code} value={district.code}>
+                      {district.name}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -247,10 +307,18 @@ const StudentForm = () => {
                   { required: true, message: "Vui lòng chọn phường/xã!" },
                 ]}
               >
-                <Select placeholder="Chọn phường/xã">
-                  <Option value="phuong1">Phường 1</Option>
-                  <Option value="phuong2">Phường 2</Option>
-                  {/* Thêm các phường xã khác */}
+                <Select
+                  showSearch
+                  placeholder="Chọn phường/xã"
+                  disabled={!selectedDistrict}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {wards?.data?.map((ward: Ward) => (
+                    <Option key={ward.code} value={ward.code}>
+                      {ward.name}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -266,9 +334,8 @@ const StudentForm = () => {
                   },
                 ]}
               >
-                <TextArea
-                  rows={1}
-                  // prefix={<HomeOutlined className="text-gray-400" />}
+                <Input
+                  suffix={<HomeOutlined className="text-gray-400" />}
                   placeholder="Số nhà, tên đường..."
                 />
               </Form.Item>
@@ -287,10 +354,18 @@ const StudentForm = () => {
                 name="faculty"
                 rules={[{ required: true, message: "Vui lòng chọn khoa!" }]}
               >
-                <Select placeholder="Chọn khoa">
-                  <Option value="cntt">Công nghệ thông tin</Option>
-                  <Option value="kt">Kinh tế</Option>
-                  {/* Thêm các khoa khác */}
+                <Select
+                  showSearch
+                  placeholder="Chọn khoa"
+                  onChange={handleFacultyChange}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {FACULTY_OPTIONS.map((faculty: any) => (
+                    <Option key={faculty.value} value={faculty.value}>
+                      {faculty.label}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -303,10 +378,19 @@ const StudentForm = () => {
                   { required: true, message: "Vui lòng chọn chuyên ngành!" },
                 ]}
               >
-                <Select placeholder="Chọn chuyên ngành">
-                  <Option value="khmt">Khoa học máy tính</Option>
-                  <Option value="ktqt">Kinh tế quốc tế</Option>
-                  {/* Thêm các chuyên ngành khác */}
+                <Select
+                  showSearch
+                  placeholder="Chọn chuyên ngành"
+                  disabled={!selectedFaculty}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {selectedFaculty &&
+                    MAJOR_OPTIONS[selectedFaculty]?.map((major) => (
+                      <Option key={major.value} value={major.value}>
+                        {major.label}
+                      </Option>
+                    ))}
                 </Select>
               </Form.Item>
             </Col>

@@ -9,7 +9,6 @@ import {
   Space,
   Divider,
 } from "antd";
-import { DormitoryRegistration } from "@/types/dormitoryRegistration";
 
 interface Props {
   onSubmit: (values: any) => void;
