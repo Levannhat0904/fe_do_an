@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.0.1",
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "fortawesome/react-fontawesome",
     "@phosphor-icons/react": "^2.1.7",
     "@reduxjs/toolkit": "^2.2.7",
     "@spotlightjs/spotlight": "^2.9.0",

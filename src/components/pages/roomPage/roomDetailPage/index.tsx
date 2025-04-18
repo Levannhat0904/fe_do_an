@@ -26,7 +26,8 @@ import {
   Radio,
   InputNumber,
   List,
-  Avatar
+  Avatar,
+  Result,
 } from "antd";
 import {
   HomeOutlined,
@@ -42,230 +43,110 @@ import {
   CloseCircleOutlined,
   HistoryOutlined,
   StopOutlined,
-  ExportOutlined
+  ExportOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import roomApi, { RoomDetail } from "@/api/room";
 
-interface RoomDetailData {
-  room: {
-    id: number;
-    buildingName: string;
-    roomNumber: string;
-    floor: number;
-    capacity: number;
-    occupied: number;
-    type: string;
-    monthlyFee: number;
-    status: string;
-    lastCleaned: string;
-    nextMaintenance: string;
-    createdAt: string;
-    amenities: string[];
-    description: string;
-    roomArea: number;
-    notes: string;
-  };
-  residents: any[];
-  maintenanceHistory: any[];
-  pendingRequests: any[];
-  utilities: any[];
-}
-
-// Mock API hook - Thay thế bằng API thực tế
-const useGetRoomDetail = (id: number) => {
-  const [data, setData] = useState<RoomDetailData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    // Mock data - thay thế bằng API call thực tế
-    const mockData = {
-      room: {
-        id: id,
-        buildingName: "Tòa nhà A",
-        roomNumber: `A${Math.floor(id / 10) + 1}0${id % 10}`,
-        floor: Math.floor(id / 10) + 1,
-        capacity: 4,
-        occupied: 3,
-        type: id % 2 === 0 ? "nam" : "nữ",
-        monthlyFee: 600000,
-        status: "active",
-        lastCleaned: "2024-03-15T10:30:00",
-        nextMaintenance: "2024-05-20T00:00:00",
-        createdAt: "2023-08-10T00:00:00",
-        amenities: ["Điều hòa", "Tủ lạnh", "Máy giặt", "Wifi", "Bàn học"],
-        description: "Phòng 4 người với đầy đủ tiện nghi sinh hoạt",
-        roomArea: 32, // m2
-        notes: "Phòng đã được sửa chữa quạt trần vào ngày 10/03/2024"
-      },
-      residents: [
-        {
-          id: 101,
-          studentCode: "SV000101",
-          fullName: "Nguyễn Văn A",
-          gender: "male",
-          phone: "0987654321",
-          email: "nguyenvana@example.com",
-          status: "approved",
-          joinDate: "2023-09-05T00:00:00",
-          endDate: "2024-06-30T00:00:00",
-          bedNumber: "01",
-          paymentStatus: "paid"
-        },
-        {
-          id: 102,
-          studentCode: "SV000102",
-          fullName: "Trần Văn B",
-          gender: "male",
-          phone: "0987654322",
-          email: "tranvanb@example.com",
-          status: "approved",
-          joinDate: "2023-09-05T00:00:00",
-          endDate: "2024-06-30T00:00:00",
-          bedNumber: "02",
-          paymentStatus: "partial"
-        },
-        {
-          id: 103,
-          studentCode: "SV000103",
-          fullName: "Lê Thị C",
-          gender: "female",
-          phone: "0987654323",
-          email: "lethic@example.com",
-          status: "approved",
-          joinDate: "2023-09-10T00:00:00",
-          endDate: "2024-06-30T00:00:00",
-          bedNumber: "03",
-          paymentStatus: "paid"
-        }
-      ],
-      maintenanceHistory: [
-        {
-          id: 1,
-          date: "2024-03-10T09:30:00",
-          type: "repair",
-          description: "Sửa chữa quạt trần",
-          cost: 150000,
-          staff: "Kỹ thuật viên Nguyễn Văn X",
-          status: "completed"
-        },
-        {
-          id: 2,
-          date: "2024-02-15T14:00:00",
-          type: "cleaning",
-          description: "Vệ sinh định kỳ",
-          cost: 200000,
-          staff: "Nhân viên vệ sinh Trần Thị Y",
-          status: "completed"
-        },
-        {
-          id: 3,
-          date: "2024-01-05T10:00:00",
-          type: "inspection",
-          description: "Kiểm tra hệ thống điện",
-          cost: 0,
-          staff: "Kỹ thuật viên Phạm Văn Z",
-          status: "completed"
-        }
-      ],
-      pendingRequests: [
-        {
-          id: 201,
-          date: "2024-04-05T08:45:00",
-          type: "maintenance",
-          description: "Báo hỏng bóng đèn phòng tắm",
-          requestedBy: "Nguyễn Văn A",
-          status: "pending",
-          priority: "medium"
-        },
-        {
-          id: 202,
-          date: "2024-04-01T10:30:00",
-          type: "complaint",
-          description: "Tiếng ồn từ phòng bên cạnh sau 23:00",
-          requestedBy: "Trần Văn B",
-          status: "processing",
-          priority: "low"
-        }
-      ],
-      utilities: [
-        {
-          id: 301,
-          month: "03/2024",
-          electricity: 250, // kWh
-          water: 12, // m3
-          electricityCost: 500000,
-          waterCost: 120000,
-          otherFees: 80000,
-          totalCost: 700000,
-          dueDate: "2024-04-15T00:00:00",
-          status: "unpaid"
-        },
-        {
-          id: 302,
-          month: "02/2024",
-          electricity: 240, // kWh
-          water: 10, // m3
-          electricityCost: 480000,
-          waterCost: 100000,
-          otherFees: 80000,
-          totalCost: 660000,
-          dueDate: "2024-03-15T00:00:00",
-          status: "paid",
-          paidDate: "2024-03-10T00:00:00"
-        }
-      ]
-    };
-
-    // Giả lập API call
-    setTimeout(() => {
-      setData(mockData);
-      setIsLoading(false);
-    }, 800);
-  }, [id]);
-
-  return { data, isLoading, error };
-};
+interface RoomDetailData extends RoomDetail {}
 
 const RoomDetailPage = () => {
   const router = useRouter();
   const params = useParams();
-  const roomId = params?.id;
+  const roomId = Number(params.id);
+
+  const [data, setData] = useState<RoomDetailData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
   const [activeTab, setActiveTab] = useState("info");
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [addResidentModalVisible, setAddResidentModalVisible] = useState(false);
-  const [addMaintenanceModalVisible, setAddMaintenanceModalVisible] = useState(false);
+  const [addMaintenanceModalVisible, setAddMaintenanceModalVisible] =
+    useState(false);
   const [addUtilityModalVisible, setAddUtilityModalVisible] = useState(false);
   const [form] = Form.useForm();
 
-  const { data, isLoading, error } = useGetRoomDetail(roomId);
+  useEffect(() => {
+    const fetchRoomDetail = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await roomApi.getRoomDetail(roomId);
+        console.log("Room detail data:", response); // Log the response for debugging
+        setData(response);
+      } catch (err) {
+        console.error("Error fetching room detail:", err);
+        setError(err);
+        notification.error({
+          message: "Lỗi",
+          description:
+            "Không thể tải thông tin chi tiết phòng. Vui lòng thử lại sau.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (roomId) {
+      fetchRoomDetail();
+    }
+  }, [roomId]);
 
   // Handle edit room
   const handleEditRoom = () => {
     form.setFieldsValue({
       roomNumber: data?.room.roomNumber,
-      floor: data?.room.floor,
+      floor: data?.room.floorNumber,
       capacity: data?.room.capacity,
-      type: data?.room.type,
-      monthlyFee: data?.room.monthlyFee,
+      type: data?.room.roomType === "male" ? "nam" : "nữ",
+      monthlyFee: data?.room.pricePerMonth,
       amenities: data?.room.amenities,
       description: data?.room.description,
       roomArea: data?.room.roomArea,
-      notes: data?.room.notes
+      notes: data?.room.notes,
     });
     setEditModalVisible(true);
   };
 
-  const handleSaveRoom = () => {
-    form.validateFields().then(values => {
-      // Call API to update room data
-      notification.success({
-        message: "Cập nhật thành công",
-        description: `Đã cập nhật thông tin phòng ${data?.room.roomNumber}`
+  const handleSaveRoom = async () => {
+    try {
+      const values = await form.validateFields();
+      const formData = new FormData();
+
+      // Append form values to formData
+      Object.keys(values).forEach((key) => {
+        if (key === "type") {
+          formData.append(
+            "roomType",
+            values[key] === "nam" ? "male" : "female"
+          );
+        } else if (key === "amenities" && Array.isArray(values[key])) {
+          formData.append("amenities", JSON.stringify(values[key]));
+        } else {
+          formData.append(key, values[key]);
+        }
       });
+
+      await roomApi.updateRoom(roomId, formData);
+
+      notification.success({
+        message: "Thành công",
+        description: "Cập nhật thông tin phòng thành công",
+      });
+
+      // Refresh data
+      const updatedData = await roomApi.getRoomDetail(roomId);
+      setData(updatedData);
+
       setEditModalVisible(false);
-    });
+    } catch (error) {
+      console.error("Error updating room:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể cập nhật thông tin phòng",
+      });
+    }
   };
 
   // Add resident handler
@@ -275,11 +156,11 @@ const RoomDetailPage = () => {
   };
 
   const handleSaveResident = () => {
-    form.validateFields().then(values => {
+    form.validateFields().then((values) => {
       // Call API to add resident
       notification.success({
         message: "Thêm sinh viên thành công",
-        description: `Đã thêm sinh viên ${values.fullName} vào phòng ${data?.room.roomNumber}`
+        description: `Đã thêm sinh viên ${values.fullName} vào phòng ${data?.room.roomNumber}`,
       });
       setAddResidentModalVisible(false);
     });
@@ -292,11 +173,11 @@ const RoomDetailPage = () => {
   };
 
   const handleSaveMaintenance = () => {
-    form.validateFields().then(values => {
+    form.validateFields().then((values) => {
       // Call API to add maintenance record
       notification.success({
         message: "Thêm bảo trì thành công",
-        description: `Đã thêm lịch bảo trì cho phòng ${data?.room.roomNumber}`
+        description: `Đã thêm lịch bảo trì cho phòng ${data?.room.roomNumber}`,
       });
       setAddMaintenanceModalVisible(false);
     });
@@ -309,65 +190,108 @@ const RoomDetailPage = () => {
   };
 
   const handleSaveUtility = () => {
-    form.validateFields().then(values => {
+    form.validateFields().then((values) => {
       // Call API to add utility record
       notification.success({
         message: "Thêm hóa đơn thành công",
-        description: `Đã thêm hóa đơn tiện ích tháng ${values.month} cho phòng ${data?.room.roomNumber}`
+        description: `Đã thêm hóa đơn tiện ích tháng ${values.month} cho phòng ${data?.room.roomNumber}`,
       });
       setAddUtilityModalVisible(false);
     });
   };
 
   // Handle resident removal
-  const showRemoveConfirm = (resident) => {
+  const showRemoveConfirm = (resident: any) => {
     Modal.confirm({
-      title: 'Xác nhận xóa sinh viên',
+      title: "Xác nhận xóa sinh viên",
       icon: <ExclamationCircleOutlined />,
       content: `Bạn có chắc chắn muốn xóa sinh viên ${resident.fullName} khỏi phòng này?`,
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
       onOk() {
         // Call API to remove resident
         notification.success({
-          message: 'Xóa thành công',
-          description: `Đã xóa sinh viên ${resident.fullName} khỏi phòng ${data?.room.roomNumber}`
+          message: "Xóa thành công",
+          description: `Đã xóa sinh viên ${resident.fullName} khỏi phòng ${data?.room.roomNumber}`,
         });
-      }
+      },
     });
   };
 
   // Handle request processing
-  const handleProcessRequest = (request) => {
+  const handleProcessRequest = async (request: any) => {
     Modal.confirm({
-      title: 'Xử lý yêu cầu',
-      content: `Xác nhận xử lý yêu cầu "${request.description}"?`,
-      okText: 'Xử lý',
-      cancelText: 'Hủy',
-      onOk() {
-        // Call API to process request
-        notification.success({
-          message: 'Đã cập nhật',
-          description: `Yêu cầu đã được chuyển sang trạng thái xử lý`
-        });
-      }
+      title: "Xử lý yêu cầu",
+      icon: <ExclamationCircleOutlined />,
+      content: `Bạn có chắc chắn muốn ${
+        request.status === "pending" ? "xử lý" : "hoàn thành"
+      } yêu cầu này?`,
+      okText: "Có",
+      cancelText: "Không",
+      async onOk() {
+        try {
+          await roomApi.processMaintenanceRequest(
+            request.id,
+            request.status === "pending" ? "processing" : "completed"
+          );
+          notification.success({
+            message: "Thành công",
+            description: "Cập nhật trạng thái yêu cầu thành công",
+          });
+
+          // Refresh data
+          const updatedData = await roomApi.getRoomDetail(roomId);
+          setData(updatedData);
+        } catch (error) {
+          console.error("Error processing request:", error);
+          notification.error({
+            message: "Lỗi",
+            description: "Không thể xử lý yêu cầu",
+          });
+        }
+      },
     });
   };
 
   // Format date
-  const formatDate = (dateString) => {
-    return dayjs(dateString).format('DD/MM/YYYY HH:mm');
+  const formatDate = (dateString: string | Date | undefined) => {
+    if (!dateString) return "N/A";
+    return dayjs(dateString).format("DD/MM/YYYY HH:mm");
   };
 
   // Format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined) return "N/A";
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  const getRoomStatusTag = (status: string) => {
+    switch (status) {
+      case "available":
+        return <Tag color="green">Còn trống</Tag>;
+      case "full":
+        return <Tag color="blue">Đã đầy</Tag>;
+      case "maintenance":
+        return <Tag color="pink">Đang bảo trì</Tag>;
+      default:
+        return <Tag color="default">{status}</Tag>;
+    }
   };
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -375,13 +299,13 @@ const RoomDetailPage = () => {
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', margin: '50px' }}>
+      <div style={{ textAlign: "center", margin: "50px" }}>
         <Result
           status="error"
           title="Lỗi tải dữ liệu"
           subTitle="Không thể tải thông tin phòng. Vui lòng thử lại sau."
           extra={
-            <Button type="primary" onClick={() => router.push('/rooms')}>
+            <Button type="primary" onClick={() => router.push("/rooms")}>
               Quay lại danh sách phòng
             </Button>
           }
@@ -390,51 +314,74 @@ const RoomDetailPage = () => {
     );
   }
 
-  const { room, residents, maintenanceHistory, pendingRequests, utilities } = data;
+  if (!data || !data.room) {
+    return (
+      <div style={{ textAlign: "center", margin: "50px" }}>
+        <Result
+          status="warning"
+          title="Không tìm thấy dữ liệu"
+          subTitle="Không có thông tin phòng hoặc dữ liệu không đầy đủ."
+          extra={
+            <Button type="primary" onClick={() => router.push("/rooms")}>
+              Quay lại danh sách phòng
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  const {
+    room,
+    residents = [],
+    maintenanceHistory = [],
+    pendingRequests = [],
+    utilities = [],
+  } = data;
 
   // Column definitions for residents table
   const residentColumns = [
     {
-      title: 'Mã SV',
-      dataIndex: 'studentCode',
-      key: 'studentCode',
+      title: "Mã SV",
+      dataIndex: "studentCode",
+      key: "studentCode",
     },
     {
-      title: 'Họ và tên',
-      dataIndex: 'fullName',
-      key: 'fullName',
+      title: "Họ và tên",
+      dataIndex: "fullName",
+      key: "fullName",
     },
     {
-      title: 'Giới tính',
-      dataIndex: 'gender',
-      key: 'gender',
-      render: (gender) => gender === 'male' ? 'Nam' : 'Nữ',
+      title: "Giới tính",
+      dataIndex: "gender",
+      key: "gender",
+      render: (gender: string) => (gender === "male" ? "Nam" : "Nữ"),
     },
     {
-      title: 'Giường',
-      dataIndex: 'bedNumber',
-      key: 'bedNumber',
+      title: "Giường",
+      dataIndex: "bedNumber",
+      key: "bedNumber",
     },
     {
-      title: 'Ngày vào',
-      dataIndex: 'joinDate',
-      key: 'joinDate',
-      render: (date) => formatDate(date),
+      title: "Ngày vào",
+      dataIndex: "joinDate",
+      key: "joinDate",
+      render: (date: string) => formatDate(date),
     },
     {
-      title: 'Ngày ra dự kiến',
-      dataIndex: 'endDate',
-      key: 'endDate',
-      render: (date) => formatDate(date),
+      title: "Ngày ra dự kiến",
+      dataIndex: "endDate",
+      key: "endDate",
+      render: (date: string) => formatDate(date),
     },
     {
-      title: 'Thanh toán',
-      dataIndex: 'paymentStatus',
-      key: 'paymentStatus',
-      render: (status) => {
-        if (status === 'paid') {
+      title: "Thanh toán",
+      dataIndex: "paymentStatus",
+      key: "paymentStatus",
+      render: (status: string) => {
+        if (status === "paid") {
           return <Badge status="success" text="Đã thanh toán" />;
-        } else if (status === 'partial') {
+        } else if (status === "partial") {
           return <Badge status="warning" text="Thanh toán một phần" />;
         } else {
           return <Badge status="error" text="Chưa thanh toán" />;
@@ -442,9 +389,9 @@ const RoomDetailPage = () => {
       },
     },
     {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_, record) => (
+      title: "Thao tác",
+      key: "action",
+      render: (_: unknown, record: any) => (
         <Space size="small">
           <Tooltip title="Chỉnh sửa">
             <Button icon={<EditOutlined />} size="small" />
@@ -465,48 +412,52 @@ const RoomDetailPage = () => {
   // Column definitions for maintenance history table
   const maintenanceColumns = [
     {
-      title: 'Ngày',
-      dataIndex: 'date',
-      key: 'date',
-      render: (date) => formatDate(date),
+      title: "Ngày",
+      dataIndex: "date",
+      key: "date",
+      render: (date: string) => formatDate(date),
     },
     {
-      title: 'Loại',
-      dataIndex: 'type',
-      key: 'type',
-      render: (type) => {
+      title: "Loại",
+      dataIndex: "type",
+      key: "type",
+      render: (type: string) => {
         switch (type) {
-          case 'repair': return <Tag color="volcano">Sửa chữa</Tag>;
-          case 'cleaning': return <Tag color="green">Vệ sinh</Tag>;
-          case 'inspection': return <Tag color="blue">Kiểm tra</Tag>;
-          default: return <Tag>{type}</Tag>;
+          case "repair":
+            return <Tag color="volcano">Sửa chữa</Tag>;
+          case "cleaning":
+            return <Tag color="green">Vệ sinh</Tag>;
+          case "inspection":
+            return <Tag color="blue">Kiểm tra</Tag>;
+          default:
+            return <Tag>{type}</Tag>;
         }
       },
     },
     {
-      title: 'Mô tả',
-      dataIndex: 'description',
-      key: 'description',
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
     },
     {
-      title: 'Chi phí',
-      dataIndex: 'cost',
-      key: 'cost',
-      render: (cost) => formatCurrency(cost),
+      title: "Chi phí",
+      dataIndex: "cost",
+      key: "cost",
+      render: (cost: number) => formatCurrency(cost),
     },
     {
-      title: 'Nhân viên',
-      dataIndex: 'staff',
-      key: 'staff',
+      title: "Nhân viên",
+      dataIndex: "staff",
+      key: "staff",
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        if (status === 'completed') {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => {
+        if (status === "completed") {
           return <Badge status="success" text="Hoàn thành" />;
-        } else if (status === 'in-progress') {
+        } else if (status === "in-progress") {
           return <Badge status="processing" text="Đang thực hiện" />;
         } else {
           return <Badge status="default" text={status} />;
@@ -518,56 +469,63 @@ const RoomDetailPage = () => {
   // Column definitions for pending requests table
   const requestColumns = [
     {
-      title: 'Ngày yêu cầu',
-      dataIndex: 'date',
-      key: 'date',
-      render: (date) => formatDate(date),
+      title: "Ngày yêu cầu",
+      dataIndex: "date",
+      key: "date",
+      render: (date: string) => formatDate(date),
     },
     {
-      title: 'Loại',
-      dataIndex: 'type',
-      key: 'type',
-      render: (type) => {
+      title: "Loại",
+      dataIndex: "type",
+      key: "type",
+      render: (type: string) => {
         switch (type) {
-          case 'maintenance': return <Tag color="blue">Bảo trì</Tag>;
-          case 'complaint': return <Tag color="red">Khiếu nại</Tag>;
-          default: return <Tag>{type}</Tag>;
+          case "maintenance":
+            return <Tag color="blue">Bảo trì</Tag>;
+          case "complaint":
+            return <Tag color="red">Khiếu nại</Tag>;
+          default:
+            return <Tag>{type}</Tag>;
         }
       },
     },
     {
-      title: 'Mô tả',
-      dataIndex: 'description',
-      key: 'description',
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
     },
     {
-      title: 'Người yêu cầu',
-      dataIndex: 'requestedBy',
-      key: 'requestedBy',
+      title: "Người yêu cầu",
+      dataIndex: "requestedBy",
+      key: "requestedBy",
     },
     {
-      title: 'Mức độ',
-      dataIndex: 'priority',
-      key: 'priority',
-      render: (priority) => {
+      title: "Mức độ",
+      dataIndex: "priority",
+      key: "priority",
+      render: (priority: string) => {
         switch (priority) {
-          case 'high': return <Tag color="red">Cao</Tag>;
-          case 'medium': return <Tag color="orange">Trung bình</Tag>;
-          case 'low': return <Tag color="green">Thấp</Tag>;
-          default: return <Tag>{priority}</Tag>;
+          case "high":
+            return <Tag color="red">Cao</Tag>;
+          case "medium":
+            return <Tag color="orange">Trung bình</Tag>;
+          case "low":
+            return <Tag color="green">Thấp</Tag>;
+          default:
+            return <Tag>{priority}</Tag>;
         }
       },
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        if (status === 'pending') {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => {
+        if (status === "pending") {
           return <Badge status="warning" text="Chờ xử lý" />;
-        } else if (status === 'processing') {
+        } else if (status === "processing") {
           return <Badge status="processing" text="Đang xử lý" />;
-        } else if (status === 'completed') {
+        } else if (status === "completed") {
           return <Badge status="success" text="Hoàn thành" />;
         } else {
           return <Badge status="default" text={status} />;
@@ -575,11 +533,11 @@ const RoomDetailPage = () => {
       },
     },
     {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_, record) => (
+      title: "Thao tác",
+      key: "action",
+      render: (_: unknown, record: any) => (
         <Space size="small">
-          {record.status === 'pending' && (
+          {record.status === "pending" && (
             <Button
               type="primary"
               size="small"
@@ -589,10 +547,7 @@ const RoomDetailPage = () => {
               Xử lý
             </Button>
           )}
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-          >
+          <Button size="small" icon={<EditOutlined />}>
             Chi tiết
           </Button>
         </Space>
@@ -603,68 +558,73 @@ const RoomDetailPage = () => {
   // Column definitions for utilities table
   const utilityColumns = [
     {
-      title: 'Tháng',
-      dataIndex: 'month',
-      key: 'month',
+      title: "Tháng",
+      dataIndex: "month",
+      key: "month",
     },
     {
-      title: 'Điện (kWh)',
-      dataIndex: 'electricity',
-      key: 'electricity',
+      title: "Điện (kWh)",
+      dataIndex: "electricity",
+      key: "electricity",
     },
     {
-      title: 'Nước (m³)',
-      dataIndex: 'water',
-      key: 'water',
+      title: "Nước (m³)",
+      dataIndex: "water",
+      key: "water",
     },
     {
-      title: 'Chi phí điện',
-      dataIndex: 'electricityCost',
-      key: 'electricityCost',
-      render: (cost) => formatCurrency(cost),
+      title: "Chi phí điện",
+      dataIndex: "electricityCost",
+      key: "electricityCost",
+      render: (cost: number) => formatCurrency(cost),
     },
     {
-      title: 'Chi phí nước',
-      dataIndex: 'waterCost',
-      key: 'waterCost',
-      render: (cost) => formatCurrency(cost),
+      title: "Chi phí nước",
+      dataIndex: "waterCost",
+      key: "waterCost",
+      render: (cost: number) => formatCurrency(cost),
     },
     {
-      title: 'Phí khác',
-      dataIndex: 'otherFees',
-      key: 'otherFees',
-      render: (cost) => formatCurrency(cost),
+      title: "Phí khác",
+      dataIndex: "otherFees",
+      key: "otherFees",
+      render: (cost: number) => formatCurrency(cost),
     },
     {
-      title: 'Tổng cộng',
-      dataIndex: 'totalCost',
-      key: 'totalCost',
-      render: (cost) => formatCurrency(cost),
+      title: "Tổng cộng",
+      dataIndex: "totalCost",
+      key: "totalCost",
+      render: (cost: number) => formatCurrency(cost),
     },
     {
-      title: 'Hạn thanh toán',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      render: (date) => formatDate(date),
+      title: "Hạn thanh toán",
+      dataIndex: "dueDate",
+      key: "dueDate",
+      render: (date: string) => formatDate(date),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status, record) => {
-        if (status === 'paid') {
-          return <Badge status="success" text={`Đã thanh toán (${formatDate(record.paidDate)})`} />;
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string, record: any) => {
+        if (status === "paid") {
+          return (
+            <Badge
+              status="success"
+              text={`Đã thanh toán (${formatDate(record.paidDate)})`}
+            />
+          );
         } else {
           return <Badge status="error" text="Chưa thanh toán" />;
         }
       },
     },
     {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_, record) => (
+      title: "Thao tác",
+      key: "action",
+      render: (_: unknown, record: any) => (
         <Space size="small">
-          {record.status === 'unpaid' && (
+          {record.status === "unpaid" && (
             <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
               Đánh dấu đã thu
             </Button>
@@ -678,31 +638,43 @@ const RoomDetailPage = () => {
   ];
 
   return (
-    <div style={{ padding: '16px' }}>
+    <div style={{ padding: "16px" }}>
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <Space>
-            <Button icon={<RollbackOutlined />} onClick={() => router.push('/rooms')}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginBottom: "20px",
+            flexWrap: "wrap",
+            gap: "10px",
+          }}
+        >
+          <Space wrap>
+            <Button
+              icon={<RollbackOutlined />}
+              onClick={() => router.push("/rooms")}
+            >
               Quay lại
             </Button>
             <h2 style={{ margin: 0 }}>Chi tiết phòng {room.roomNumber}</h2>
-            {room.status === 'active' ? (
-              <Tag color="green">Đang hoạt động</Tag>
-            ) : (
-              <Tag color="red">Ngừng hoạt động</Tag>
-            )}
+            {getRoomStatusTag(room.status)}
           </Space>
-          <Space>
-            <Button icon={<EditOutlined />} type="primary" onClick={handleEditRoom}>
+          <Space wrap>
+            <Button
+              icon={<EditOutlined />}
+              type="primary"
+              onClick={handleEditRoom}
+            >
               Chỉnh sửa thông tin
             </Button>
-            {room.status === 'active' ? (
-              <Button icon={<StopOutlined />} danger>
-                Ngừng hoạt động
+            {room.status === "maintenance" ? (
+              <Button icon={<CheckCircleOutlined />} type="primary">
+                Kích hoạt lại
               </Button>
             ) : (
-              <Button icon={<CheckCircleOutlined />} type="primary">
-                Kích hoạt
+              <Button icon={<StopOutlined />} danger>
+                Đánh dấu bảo trì
               </Button>
             )}
           </Space>
@@ -713,7 +685,7 @@ const RoomDetailPage = () => {
           onChange={setActiveTab}
           items={[
             {
-              key: 'info',
+              key: "info",
               label: (
                 <span>
                   <HomeOutlined /> Thông tin phòng
@@ -721,40 +693,72 @@ const RoomDetailPage = () => {
               ),
               children: (
                 <>
-                  <Row gutter={24}>
-                    <Col span={16}>
+                  <Row gutter={[24, 24]}>
+                    <Col xs={24} md={24} lg={16}>
                       <Card title="Thông tin cơ bản" bordered={false}>
-                        <Descriptions bordered column={2}>
-                          <Descriptions.Item label="Tòa nhà">{room.buildingName}</Descriptions.Item>
-                          <Descriptions.Item label="Số phòng">{room.roomNumber}</Descriptions.Item>
-                          <Descriptions.Item label="Tầng">{room.floor}</Descriptions.Item>
-                          <Descriptions.Item label="Diện tích">{room.roomArea} m²</Descriptions.Item>
-                          <Descriptions.Item label="Loại phòng">{room.type === 'nam' ? 'Nam' : 'Nữ'}</Descriptions.Item>
-                          <Descriptions.Item label="Sức chứa">{room.occupied}/{room.capacity} người</Descriptions.Item>
-                          <Descriptions.Item label="Giá phòng">{formatCurrency(room.monthlyFee)}/tháng</Descriptions.Item>
-                          <Descriptions.Item label="Ngày tạo">{formatDate(room.createdAt)}</Descriptions.Item>
-                          <Descriptions.Item label="Vệ sinh gần nhất">{formatDate(room.lastCleaned)}</Descriptions.Item>
-                          <Descriptions.Item label="Bảo trì tiếp theo">{formatDate(room.nextMaintenance)}</Descriptions.Item>
+                        <Descriptions bordered column={{ xs: 1, sm: 1, md: 2 }}>
+                          <Descriptions.Item label="Tòa nhà">
+                            {room.buildingName}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Số phòng">
+                            {room.roomNumber}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Tầng">
+                            {room.floorNumber}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Diện tích">
+                            {room.roomArea ? `${room.roomArea} m²` : "N/A"}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Loại phòng">
+                            {room.roomType === "male" ? "Nam" : "Nữ"}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Sức chứa">
+                            {room.occupiedBeds}/{room.capacity} người
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Giá phòng">
+                            {formatCurrency(room.pricePerMonth)}/tháng
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Ngày tạo">
+                            {formatDate(room.createdAt)}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Vệ sinh gần nhất">
+                            {room.lastCleaned
+                              ? formatDate(room.lastCleaned)
+                              : "Chưa có"}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Bảo trì tiếp theo">
+                            {room.nextMaintenance
+                              ? formatDate(room.nextMaintenance)
+                              : "Chưa lên lịch"}
+                          </Descriptions.Item>
                           <Descriptions.Item label="Tiện nghi" span={2}>
-                            {room.amenities.map((item, index) => (
-                              <Tag key={index} color="blue">{item}</Tag>
-                            ))}
+                            {room.amenities && room.amenities.length > 0
+                              ? room.amenities.map((item, index) => (
+                                  <Tag key={index} color="blue">
+                                    {item}
+                                  </Tag>
+                                ))
+                              : "Không có"}
                           </Descriptions.Item>
                           <Descriptions.Item label="Ghi chú" span={2}>
-                            {room.notes}
+                            {room.notes || "Không có ghi chú"}
                           </Descriptions.Item>
                           <Descriptions.Item label="Mô tả" span={2}>
-                            {room.description}
+                            {room.description || "Không có mô tả"}
                           </Descriptions.Item>
                         </Descriptions>
                       </Card>
                     </Col>
-                    <Col span={8}>
+                    <Col xs={24} md={24} lg={8}>
                       <Card title="Thống kê" bordered={false}>
-                        <div style={{ marginBottom: '20px' }}>
-                          <div style={{ marginBottom: '8px' }}>Tỷ lệ lấp đầy:</div>
+                        <div style={{ marginBottom: "20px" }}>
+                          <div style={{ marginBottom: "8px" }}>
+                            Tỷ lệ lấp đầy:
+                          </div>
                           <Progress
-                            percent={Math.round((room.occupied / room.capacity) * 100)}
+                            percent={Math.round(
+                              (room.occupiedBeds / room.capacity) * 100
+                            )}
                             status="active"
                           />
                         </div>
@@ -762,9 +766,24 @@ const RoomDetailPage = () => {
                         <Divider />
 
                         <Timeline>
-                          <Timeline.Item color="green">Vệ sinh gần nhất: {formatDate(room.lastCleaned)}</Timeline.Item>
-                          <Timeline.Item color="blue">Bảo trì gần nhất: {formatDate(maintenanceHistory[0].date)}</Timeline.Item>
-                          <Timeline.Item color="red">Bảo trì tiếp theo: {formatDate(room.nextMaintenance)}</Timeline.Item>
+                          <Timeline.Item color="green">
+                            Vệ sinh gần nhất:{" "}
+                            {room.lastCleaned
+                              ? formatDate(room.lastCleaned)
+                              : "Chưa có"}
+                          </Timeline.Item>
+                          <Timeline.Item color="blue">
+                            Bảo trì gần nhất:{" "}
+                            {maintenanceHistory && maintenanceHistory.length > 0
+                              ? formatDate(maintenanceHistory[0].date)
+                              : "Chưa có"}
+                          </Timeline.Item>
+                          <Timeline.Item color="red">
+                            Bảo trì tiếp theo:{" "}
+                            {room.nextMaintenance
+                              ? formatDate(room.nextMaintenance)
+                              : "Chưa lên lịch"}
+                          </Timeline.Item>
                         </Timeline>
                       </Card>
                     </Col>
@@ -773,31 +792,46 @@ const RoomDetailPage = () => {
               ),
             },
             {
-              key: 'residents',
+              key: "residents",
               label: (
                 <span>
-                  <UserOutlined /> Sinh viên ({residents.length})
+                  <UserOutlined /> Sinh viên ({residents ? residents.length : 0}
+                  )
                 </span>
               ),
               children: (
                 <>
-                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{
+                      marginBottom: "16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <h3>Danh sách sinh viên</h3>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAddResident}>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleAddResident}
+                    >
                       Thêm sinh viên
                     </Button>
                   </div>
-                  <Table
-                    columns={residentColumns}
-                    dataSource={residents}
-                    rowKey="id"
-                    pagination={false}
-                  />
+                  {residents && residents.length > 0 ? (
+                    <Table
+                      columns={residentColumns}
+                      dataSource={residents}
+                      rowKey="id"
+                      pagination={false}
+                    />
+                  ) : (
+                    <Empty description="Không có sinh viên trong phòng này" />
+                  )}
                 </>
               ),
             },
             {
-              key: 'maintenance',
+              key: "maintenance",
               label: (
                 <span>
                   <ToolOutlined /> Bảo trì & Yêu cầu
@@ -805,39 +839,70 @@ const RoomDetailPage = () => {
               ),
               children: (
                 <>
-                  <Tabs defaultActiveKey="pending" style={{ marginBottom: '16px' }}>
+                  <Tabs
+                    defaultActiveKey="pending"
+                    style={{ marginBottom: "16px" }}
+                  >
                     <Tabs.TabPane tab="Yêu cầu chờ xử lý" key="pending">
-                      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => {}}>
+                      <div
+                        style={{
+                          marginBottom: "16px",
+                          display: "flex",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <Button
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={handleAddMaintenance}
+                        >
                           Thêm yêu cầu mới
                         </Button>
                       </div>
-                      <Table
-                        columns={requestColumns}
-                        dataSource={pendingRequests}
-                        rowKey="id"
-                        pagination={false}
-                      />
+                      {pendingRequests && pendingRequests.length > 0 ? (
+                        <Table
+                          columns={requestColumns}
+                          dataSource={pendingRequests}
+                          rowKey="id"
+                          pagination={false}
+                        />
+                      ) : (
+                        <Empty description="Không có yêu cầu bảo trì nào đang chờ xử lý" />
+                      )}
                     </Tabs.TabPane>
                     <Tabs.TabPane tab="Lịch sử bảo trì" key="history">
-                      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMaintenance}>
+                      <div
+                        style={{
+                          marginBottom: "16px",
+                          display: "flex",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <Button
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={handleAddMaintenance}
+                        >
                           Thêm lịch sử bảo trì
                         </Button>
                       </div>
-                      <Table
-                        columns={maintenanceColumns}
-                        dataSource={maintenanceHistory}
-                        rowKey="id"
-                        pagination={false}
-                      />
+                      {maintenanceHistory && maintenanceHistory.length > 0 ? (
+                        <Table
+                          columns={maintenanceColumns}
+                          dataSource={maintenanceHistory}
+                          rowKey="id"
+                          pagination={false}
+                        />
+                      ) : (
+                        <Empty description="Không có lịch sử bảo trì" />
+                      )}
                     </Tabs.TabPane>
                   </Tabs>
                 </>
               ),
             },
             {
-              key: 'utilities',
+              key: "utilities",
               label: (
                 <span>
                   <CalendarOutlined /> Hóa đơn tiện ích
@@ -845,24 +910,38 @@ const RoomDetailPage = () => {
               ),
               children: (
                 <>
-                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{
+                      marginBottom: "16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <h3>Hóa đơn tiện ích</h3>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUtility}>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleAddUtility}
+                    >
                       Thêm hóa đơn
                     </Button>
                   </div>
-                  <Table
-                    columns={utilityColumns}
-                    dataSource={utilities}
-                    rowKey="id"
-                    pagination={false}
-                  />
+                  {utilities && utilities.length > 0 ? (
+                    <Table
+                      columns={utilityColumns}
+                      dataSource={utilities}
+                      rowKey="id"
+                      pagination={false}
+                    />
+                  ) : (
+                    <Empty description="Không có hóa đơn tiện ích" />
+                  )}
                 </>
               ),
             },
           ]}
         />
-        </Tabs>
+      </Card>
 
       {/* Edit Room Modal */}
       <Modal
@@ -879,16 +958,13 @@ const RoomDetailPage = () => {
         ]}
         width={700}
       >
-        <Form
-          form={form}
-          layout="vertical"
-        >
+        <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="roomNumber"
                 label="Số phòng"
-                rules={[{ required: true, message: 'Vui lòng nhập số phòng!' }]}
+                rules={[{ required: true, message: "Vui lòng nhập số phòng!" }]}
               >
                 <Input />
               </Form.Item>
@@ -897,9 +973,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="floor"
                 label="Tầng"
-                rules={[{ required: true, message: 'Vui lòng nhập tầng!' }]}
+                rules={[{ required: true, message: "Vui lòng nhập tầng!" }]}
               >
-                <InputNumber style={{ width: '100%' }} min={1} />
+                <InputNumber style={{ width: "100%" }} min={1} />
               </Form.Item>
             </Col>
           </Row>
@@ -908,16 +984,18 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="capacity"
                 label="Sức chứa"
-                rules={[{ required: true, message: 'Vui lòng nhập sức chứa!' }]}
+                rules={[{ required: true, message: "Vui lòng nhập sức chứa!" }]}
               >
-                <InputNumber style={{ width: '100%' }} min={1} max={10} />
+                <InputNumber style={{ width: "100%" }} min={1} max={10} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="type"
                 label="Loại phòng"
-                rules={[{ required: true, message: 'Vui lòng chọn loại phòng!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn loại phòng!" },
+                ]}
               >
                 <Select>
                   <Select.Option value="nam">Nam</Select.Option>
@@ -931,14 +1009,18 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="monthlyFee"
                 label="Giá phòng (VNĐ/tháng)"
-                rules={[{ required: true, message: 'Vui lòng nhập giá phòng!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập giá phòng!" },
+                ]}
               >
                 <InputNumber
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   min={0}
                   step={100000}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
               </Form.Item>
             </Col>
@@ -946,17 +1028,20 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="roomArea"
                 label="Diện tích (m²)"
-                rules={[{ required: true, message: 'Vui lòng nhập diện tích!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập diện tích!" },
+                ]}
               >
-                <InputNumber style={{ width: '100%' }} min={1} />
+                <InputNumber style={{ width: "100%" }} min={1} />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item
-            name="amenities"
-            label="Tiện nghi"
-          >
-            <Select mode="tags" style={{ width: '100%' }} placeholder="Chọn hoặc nhập tiện nghi">
+          <Form.Item name="amenities" label="Tiện nghi">
+            <Select
+              mode="tags"
+              style={{ width: "100%" }}
+              placeholder="Chọn hoặc nhập tiện nghi"
+            >
               <Select.Option value="Điều hòa">Điều hòa</Select.Option>
               <Select.Option value="Tủ lạnh">Tủ lạnh</Select.Option>
               <Select.Option value="Máy giặt">Máy giặt</Select.Option>
@@ -966,16 +1051,10 @@ const RoomDetailPage = () => {
               <Select.Option value="Tủ quần áo">Tủ quần áo</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item
-            name="description"
-            label="Mô tả"
-          >
+          <Form.Item name="description" label="Mô tả">
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item
-            name="notes"
-            label="Ghi chú"
-          >
+          <Form.Item name="notes" label="Ghi chú">
             <Input.TextArea rows={2} />
           </Form.Item>
         </Form>
@@ -996,16 +1075,15 @@ const RoomDetailPage = () => {
         ]}
         width={700}
       >
-        <Form
-          form={form}
-          layout="vertical"
-        >
+        <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="studentCode"
                 label="Mã sinh viên"
-                rules={[{ required: true, message: 'Vui lòng nhập mã sinh viên!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã sinh viên!" },
+                ]}
               >
                 <Input />
               </Form.Item>
@@ -1014,7 +1092,7 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="fullName"
                 label="Họ và tên"
-                rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
+                rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
               >
                 <Input />
               </Form.Item>
@@ -1025,7 +1103,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="gender"
                 label="Giới tính"
-                rules={[{ required: true, message: 'Vui lòng chọn giới tính!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn giới tính!" },
+                ]}
               >
                 <Radio.Group>
                   <Radio value="male">Nam</Radio>
@@ -1037,7 +1117,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="bedNumber"
                 label="Số giường"
-                rules={[{ required: true, message: 'Vui lòng chọn số giường!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn số giường!" },
+                ]}
               >
                 <Select>
                   <Select.Option value="01">Giường 01</Select.Option>
@@ -1053,7 +1135,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="phone"
                 label="Số điện thoại"
-                rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại!" },
+                ]}
               >
                 <Input />
               </Form.Item>
@@ -1063,8 +1147,8 @@ const RoomDetailPage = () => {
                 name="email"
                 label="Email"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập email!' },
-                  { type: 'email', message: 'Email không hợp lệ!' }
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
                 ]}
               >
                 <Input />
@@ -1076,7 +1160,7 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="joinDate"
                 label="Ngày vào"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày vào!' }]}
+                rules={[{ required: true, message: "Vui lòng chọn ngày vào!" }]}
               >
                 <Input type="date" />
               </Form.Item>
@@ -1085,7 +1169,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="endDate"
                 label="Ngày ra dự kiến"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày ra dự kiến!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày ra dự kiến!" },
+                ]}
               >
                 <Input type="date" />
               </Form.Item>
@@ -1100,7 +1186,10 @@ const RoomDetailPage = () => {
         open={addMaintenanceModalVisible}
         onCancel={() => setAddMaintenanceModalVisible(false)}
         footer={[
-          <Button key="back" onClick={() => setAddMaintenanceModalVisible(false)}>
+          <Button
+            key="back"
+            onClick={() => setAddMaintenanceModalVisible(false)}
+          >
             Hủy
           </Button>,
           <Button key="submit" type="primary" onClick={handleSaveMaintenance}>
@@ -1108,16 +1197,15 @@ const RoomDetailPage = () => {
           </Button>,
         ]}
       >
-        <Form
-          form={form}
-          layout="vertical"
-        >
+        <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="date"
                 label="Ngày thực hiện"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày thực hiện!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày thực hiện!" },
+                ]}
               >
                 <Input type="datetime-local" />
               </Form.Item>
@@ -1126,7 +1214,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="type"
                 label="Loại bảo trì"
-                rules={[{ required: true, message: 'Vui lòng chọn loại bảo trì!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn loại bảo trì!" },
+                ]}
               >
                 <Select>
                   <Select.Option value="repair">Sửa chữa</Select.Option>
@@ -1139,7 +1229,9 @@ const RoomDetailPage = () => {
           <Form.Item
             name="description"
             label="Mô tả"
-            rules={[{ required: true, message: 'Vui lòng nhập mô tả công việc!' }]}
+            rules={[
+              { required: true, message: "Vui lòng nhập mô tả công việc!" },
+            ]}
           >
             <Input.TextArea rows={3} />
           </Form.Item>
@@ -1148,14 +1240,16 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="cost"
                 label="Chi phí (VNĐ)"
-                rules={[{ required: true, message: 'Vui lòng nhập chi phí!' }]}
+                rules={[{ required: true, message: "Vui lòng nhập chi phí!" }]}
               >
                 <InputNumber
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   min={0}
                   step={10000}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
               </Form.Item>
             </Col>
@@ -1163,7 +1257,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="staff"
                 label="Nhân viên thực hiện"
-                rules={[{ required: true, message: 'Vui lòng nhập tên nhân viên!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên nhân viên!" },
+                ]}
               >
                 <Input />
               </Form.Item>
@@ -1172,7 +1268,7 @@ const RoomDetailPage = () => {
           <Form.Item
             name="status"
             label="Trạng thái"
-            rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
           >
             <Select>
               <Select.Option value="completed">Hoàn thành</Select.Option>
@@ -1197,14 +1293,11 @@ const RoomDetailPage = () => {
         ]}
         width={700}
       >
-        <Form
-          form={form}
-          layout="vertical"
-        >
+        <Form form={form} layout="vertical">
           <Form.Item
             name="month"
             label="Tháng"
-            rules={[{ required: true, message: 'Vui lòng nhập tháng!' }]}
+            rules={[{ required: true, message: "Vui lòng nhập tháng!" }]}
           >
             <Input placeholder="MM/YYYY" />
           </Form.Item>
@@ -1213,18 +1306,22 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="electricity"
                 label="Chỉ số điện (kWh)"
-                rules={[{ required: true, message: 'Vui lòng nhập chỉ số điện!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập chỉ số điện!" },
+                ]}
               >
-                <InputNumber style={{ width: '100%' }} min={0} />
+                <InputNumber style={{ width: "100%" }} min={0} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="water"
                 label="Chỉ số nước (m³)"
-                rules={[{ required: true, message: 'Vui lòng nhập chỉ số nước!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập chỉ số nước!" },
+                ]}
               >
-                <InputNumber style={{ width: '100%' }} min={0} />
+                <InputNumber style={{ width: "100%" }} min={0} />
               </Form.Item>
             </Col>
           </Row>
@@ -1233,14 +1330,18 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="electricityCost"
                 label="Chi phí điện (VNĐ)"
-                rules={[{ required: true, message: 'Vui lòng nhập chi phí điện!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập chi phí điện!" },
+                ]}
               >
                 <InputNumber
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   min={0}
                   step={10000}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
               </Form.Item>
             </Col>
@@ -1248,14 +1349,18 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="waterCost"
                 label="Chi phí nước (VNĐ)"
-                rules={[{ required: true, message: 'Vui lòng nhập chi phí nước!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập chi phí nước!" },
+                ]}
               >
                 <InputNumber
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   min={0}
                   step={10000}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
               </Form.Item>
             </Col>
@@ -1263,14 +1368,16 @@ const RoomDetailPage = () => {
           <Form.Item
             name="otherFees"
             label="Phí khác (VNĐ)"
-            rules={[{ required: true, message: 'Vui lòng nhập phí khác!' }]}
+            rules={[{ required: true, message: "Vui lòng nhập phí khác!" }]}
           >
             <InputNumber
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               min={0}
               step={10000}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
             />
           </Form.Item>
           <Row gutter={16}>
@@ -1278,7 +1385,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="dueDate"
                 label="Hạn thanh toán"
-                rules={[{ required: true, message: 'Vui lòng chọn hạn thanh toán!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn hạn thanh toán!" },
+                ]}
               >
                 <Input type="date" />
               </Form.Item>
@@ -1287,7 +1396,9 @@ const RoomDetailPage = () => {
               <Form.Item
                 name="status"
                 label="Trạng thái"
-                rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn trạng thái!" },
+                ]}
               >
                 <Select>
                   <Select.Option value="unpaid">Chưa thanh toán</Select.Option>
@@ -1299,15 +1410,18 @@ const RoomDetailPage = () => {
           <Form.Item
             name="paidDate"
             label="Ngày thanh toán"
-            dependencies={['status']}
+            dependencies={["status"]}
             rules={[
               ({ getFieldValue }) => ({
-                required: getFieldValue('status') === 'paid',
-                message: 'Vui lòng chọn ngày thanh toán!'
+                required: getFieldValue("status") === "paid",
+                message: "Vui lòng chọn ngày thanh toán!",
               }),
             ]}
           >
-            <Input type="date" disabled={form.getFieldValue('status') !== 'paid'} />
+            <Input
+              type="date"
+              disabled={form.getFieldValue("status") !== "paid"}
+            />
           </Form.Item>
         </Form>
       </Modal>

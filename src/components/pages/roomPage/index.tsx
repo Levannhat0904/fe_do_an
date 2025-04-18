@@ -32,122 +32,26 @@ import {
   FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
+  UserOutlined,
+  CheckOutlined,
+  ManOutlined,
+  WomanOutlined,
 } from "@ant-design/icons";
 import debounce from "lodash/debounce";
+import roomApi, { RoomFilters, Room, RoomResponse } from "@/api/room";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faSnowflake,
+  faTv,
+  faWifi,
+  faWater,
+  faIceCream,
+  faDesktop,
+  faTshirt,
+  faBed,
+} from "@fortawesome/free-solid-svg-icons";
 
 const { Option } = Select;
-
-// Mock API hook - Thay thế bằng API thực tế
-const useGetRooms = (page, limit, filters) => {
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    // Mock data - thay thế bằng API call thực tế
-    const mockRooms = Array.from({ length: 30 }, (_, i) => ({
-      id: i + 1,
-      buildingName: `Tòa nhà ${["A", "B", "C"][Math.floor(i / 10)]}`,
-      roomNumber: `${["A", "B", "C"][Math.floor(i / 10)]}${
-        Math.floor(i % 10) + 1
-      }0${Math.floor(i % 3) + 1}`,
-      floor: Math.floor(i % 10) + 1,
-      capacity: 4,
-      occupied: Math.floor(Math.random() * 5),
-      type: ["nam", "nữ", "nam", "nữ", "nam"][Math.floor(Math.random() * 5)],
-      monthlyFee: [500000, 600000, 700000][Math.floor(Math.random() * 3)],
-      status: ["active", "maintenance", "active", "active", "active"][
-        Math.floor(Math.random() * 5)
-      ],
-      lastCleaned: new Date(
-        Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000
-      ).toISOString(),
-      amenities: ["Điều hòa", "Tủ lạnh", "Máy giặt", "Tivi", "Wifi"].slice(
-        0,
-        Math.floor(Math.random() * 4) + 1
-      ),
-    }));
-
-    // Filtering logic
-    let filteredRooms = [...mockRooms];
-
-    if (filters) {
-      if (filters.buildingName) {
-        filteredRooms = filteredRooms.filter((room) =>
-          room.buildingName.includes(filters.buildingName)
-        );
-      }
-
-      if (filters.type) {
-        filteredRooms = filteredRooms.filter(
-          (room) => room.type === filters.type
-        );
-      }
-
-      if (filters.status) {
-        filteredRooms = filteredRooms.filter(
-          (room) => room.status === filters.status
-        );
-      }
-
-      if (filters.searchText) {
-        const searchLower = filters.searchText.toLowerCase();
-        filteredRooms = filteredRooms.filter(
-          (room) =>
-            room.roomNumber.toLowerCase().includes(searchLower) ||
-            room.buildingName.toLowerCase().includes(searchLower)
-        );
-      }
-
-      if (filters.availability === "available") {
-        filteredRooms = filteredRooms.filter(
-          (room) => room.occupied < room.capacity
-        );
-      } else if (filters.availability === "full") {
-        filteredRooms = filteredRooms.filter(
-          (room) => room.occupied >= room.capacity
-        );
-      }
-    }
-
-    // Pagination
-    const totalItems = filteredRooms.length;
-    const startIndex = (page - 1) * limit;
-    const paginatedRooms = filteredRooms.slice(startIndex, startIndex + limit);
-
-    const mockData = {
-      data: paginatedRooms,
-      pagination: {
-        currentPage: page,
-        itemsPerPage: limit,
-        totalItems,
-        totalPages: Math.ceil(totalItems / limit),
-      },
-      summary: {
-        totalRooms: mockRooms.length,
-        availableRooms: mockRooms.filter(
-          (room) => room.occupied < room.capacity && room.status === "active"
-        ).length,
-        maintenanceRooms: mockRooms.filter(
-          (room) => room.status === "maintenance"
-        ).length,
-        occupancyRate: Math.round(
-          (mockRooms.reduce((sum, room) => sum + room.occupied, 0) /
-            mockRooms.reduce((sum, room) => sum + room.capacity, 0)) *
-            100
-        ),
-      },
-    };
-
-    // Simulate API delay
-    // setTimeout(() => {
-    //   setData(mockData);
-    //   setIsLoading(false);
-    // }, 600);
-  }, [page, limit, filters]);
-
-  return { data, isLoading, error };
-};
 
 const DormitoryRoomManagement = () => {
   const router = useRouter();
@@ -160,18 +64,103 @@ const DormitoryRoomManagement = () => {
   const [availabilityFilter, setAvailabilityFilter] = useState("");
   const [viewMode, setViewMode] = useState("table");
   const [addRoomModalVisible, setAddRoomModalVisible] = useState(false);
+  const [editRoomModalVisible, setEditRoomModalVisible] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [data, setData] = useState<RoomResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [buildings, setBuildings] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [filters, setFilters] = useState<RoomFilters>({
+    page: 1,
+    limit: 10,
+  });
 
-  // Combine all filters
-  const filters = {
+  // Cập nhật filters khi các giá trị liên quan thay đổi
+  useEffect(() => {
+    setFilters({
+      searchText,
+      buildingName: buildingFilter,
+      type:
+        typeFilter === "nam"
+          ? "male"
+          : typeFilter === "nữ"
+          ? "female"
+          : undefined,
+      status: statusFilter,
+      availability: availabilityFilter,
+      page,
+      limit,
+    });
+  }, [
     searchText,
-    buildingName: buildingFilter,
-    type: typeFilter,
-    status: statusFilter,
-    availability: availabilityFilter,
-  };
+    buildingFilter,
+    typeFilter,
+    statusFilter,
+    availabilityFilter,
+    page,
+    limit,
+  ]);
 
-  const { data, isLoading } = useGetRooms(page, limit, filters);
+  // Fetch rooms data
+  const fetchRooms = useCallback(async (filterParams: RoomFilters) => {
+    try {
+      setIsLoading(true);
+      const response = await roomApi.getRooms(filterParams);
+
+      // Xử lý dữ liệu trước khi cập nhật state
+      const processedData = {
+        ...response,
+        data: response.data.map((room) => ({
+          ...room,
+          amenities: Array.isArray(room.amenities)
+            ? room.amenities
+            : typeof room.amenities === "string"
+            ? JSON.parse(room.amenities)
+            : [],
+        })),
+      };
+
+      setData(processedData);
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể tải dữ liệu phòng. Vui lòng thử lại sau.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Gọi fetchRooms khi filters thay đổi
+  useEffect(() => {
+    // Thêm kiểm tra để tránh gọi API khi component khởi tạo với filters rỗng
+    if (Object.keys(filters).length > 0) {
+      fetchRooms(filters);
+    }
+  }, [filters, fetchRooms]);
+
+  // Fetch buildings for dropdown
+  useEffect(() => {
+    const fetchBuildings = async () => {
+      try {
+        // This would be replaced with actual API call
+        const mockBuildings = [
+          { id: 1, name: "Tòa nhà A" },
+          { id: 2, name: "Tòa nhà B" },
+          { id: 3, name: "Tòa nhà C" },
+        ];
+        setBuildings(mockBuildings);
+      } catch (error) {
+        console.error("Error fetching buildings:", error);
+      }
+    };
+
+    fetchBuildings();
+  }, []);
 
   const debouncedSearch = useCallback(
     debounce((value) => {
@@ -193,10 +182,28 @@ const DormitoryRoomManagement = () => {
     setAddRoomModalVisible(true);
   };
 
-  const handleAddRoomSubmit = () => {
-    form.validateFields().then((values) => {
-      // Gọi API thêm phòng
-      console.log("Submitted values:", values);
+  const handleAddRoomSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+
+      // Create FormData for API call
+      const formData = new FormData();
+      formData.append("buildingId", values.buildingId);
+      formData.append("roomNumber", values.roomNumber);
+      formData.append("floorNumber", values.floorNumber);
+      formData.append("roomType", values.type === "nam" ? "male" : "female");
+      formData.append("capacity", values.capacity);
+      formData.append("pricePerMonth", values.monthlyFee);
+      formData.append(
+        "status",
+        values.status === "active" ? "available" : "maintenance"
+      );
+
+      if (values.amenities && values.amenities.length > 0) {
+        formData.append("amenities", JSON.stringify(values.amenities));
+      }
+
+      await roomApi.addRoom(formData);
 
       notification.success({
         message: "Thêm phòng thành công",
@@ -205,8 +212,76 @@ const DormitoryRoomManagement = () => {
 
       form.resetFields();
       setAddRoomModalVisible(false);
-    });
+      fetchRooms(filters); // Refresh the data
+    } catch (error) {
+      console.error("Error adding room:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể thêm phòng. Vui lòng thử lại sau.",
+      });
+    }
   };
+
+  const handleEditRoom = async () => {
+    try {
+      const values = await editForm.validateFields();
+
+      // Create FormData for API call
+      const formData = new FormData();
+      formData.append("buildingId", values.buildingId);
+      formData.append("roomNumber", values.roomNumber);
+      formData.append("floorNumber", values.floorNumber);
+      formData.append("roomType", values.type === "nam" ? "male" : "female");
+      formData.append("capacity", values.capacity);
+      formData.append("pricePerMonth", values.monthlyFee);
+      formData.append(
+        "status",
+        values.status === "active" ? "available" : "maintenance"
+      );
+
+      if (values.amenities && values.amenities.length > 0) {
+        formData.append("amenities", JSON.stringify(values.amenities));
+      }
+
+      if (selectedRoom) {
+        await roomApi.updateRoom(selectedRoom.id, formData);
+
+        notification.success({
+          message: "Cập nhật phòng thành công",
+          description: `Đã cập nhật phòng ${values.roomNumber}`,
+        });
+
+        setEditRoomModalVisible(false);
+        fetchRooms(filters); // Refresh the data
+      }
+    } catch (error) {
+      console.error("Error updating room:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể cập nhật phòng. Vui lòng thử lại sau.",
+      });
+    }
+  };
+
+  // Effect để cập nhật form khi selectedRoom thay đổi
+  useEffect(() => {
+    if (selectedRoom && editRoomModalVisible) {
+      editForm.setFieldsValue({
+        buildingId: selectedRoom.buildingId,
+        roomNumber: selectedRoom.roomNumber,
+        floorNumber: selectedRoom.floorNumber,
+        type: selectedRoom.roomType === "male" ? "nam" : "nữ",
+        capacity: selectedRoom.capacity,
+        monthlyFee: selectedRoom.pricePerMonth,
+        amenities: selectedRoom.amenities,
+        status:
+          selectedRoom.status === "available" ||
+          selectedRoom.status === "active"
+            ? "active"
+            : "maintenance",
+      });
+    }
+  }, [selectedRoom, editRoomModalVisible, editForm]);
 
   const resetFilters = () => {
     setSearchText("");
@@ -234,19 +309,19 @@ const DormitoryRoomManagement = () => {
     },
     {
       title: "Tầng",
-      dataIndex: "floor",
-      key: "floor",
+      dataIndex: "floorNumber",
+      key: "floorNumber",
       width: 80,
-      sorter: (a, b) => a.floor - b.floor,
+      sorter: (a, b) => a.floorNumber - b.floorNumber,
     },
     {
       title: "Loại phòng",
-      dataIndex: "type",
-      key: "type",
+      dataIndex: "roomType",
+      key: "roomType",
       width: 100,
       render: (type) => (
-        <Tag color={type === "nam" ? "blue" : "pink"}>
-          {type === "nam" ? "Nam" : "Nữ"}
+        <Tag color={type === "male" ? "blue" : "pink"}>
+          {type === "male" ? "Nam" : "Nữ"}
         </Tag>
       ),
     },
@@ -255,11 +330,15 @@ const DormitoryRoomManagement = () => {
       key: "capacity",
       width: 150,
       render: (_, record) => (
-        <Tooltip title={`${record.occupied}/${record.capacity} chỗ đã sử dụng`}>
+        <Tooltip
+          title={`${record.occupiedBeds}/${record.capacity} chỗ đã sử dụng`}
+        >
           <Progress
-            percent={Math.round((record.occupied / record.capacity) * 100)}
-            format={() => `${record.occupied}/${record.capacity}`}
-            status={record.occupied >= record.capacity ? "exception" : "active"}
+            percent={Math.round((record.occupiedBeds / record.capacity) * 100)}
+            format={() => `${record.occupiedBeds}/${record.capacity}`}
+            status={
+              record.occupiedBeds >= record.capacity ? "exception" : "active"
+            }
           />
         </Tooltip>
       ),
@@ -269,20 +348,37 @@ const DormitoryRoomManagement = () => {
       dataIndex: "amenities",
       key: "amenities",
       width: 200,
-      render: (amenities) => (
-        <span>
-          {amenities.map((item) => (
-            <Tag key={item}>{item}</Tag>
-          ))}
-        </span>
-      ),
+      render: (amenities) => {
+        let amenitiesArray = [];
+
+        try {
+          // Nếu amenities là chuỗi JSON, parse nó thành mảng
+          if (typeof amenities === "string") {
+            amenitiesArray = JSON.parse(amenities);
+          }
+          // Nếu amenities đã là mảng
+          else if (Array.isArray(amenities)) {
+            amenitiesArray = amenities;
+          }
+        } catch (error) {
+          console.error("Lỗi khi xử lý amenities:", error);
+        }
+
+        return (
+          <span>
+            {amenitiesArray.map((item) => (
+              <Tag key={item}>{item}</Tag>
+            ))}
+          </span>
+        );
+      },
     },
     {
       title: "Giá phòng",
-      dataIndex: "monthlyFee",
-      key: "monthlyFee",
+      dataIndex: "pricePerMonth",
+      key: "pricePerMonth",
       width: 120,
-      sorter: (a, b) => a.monthlyFee - b.monthlyFee,
+      sorter: (a, b) => a.pricePerMonth - b.pricePerMonth,
       render: (fee) => `${fee.toLocaleString("vi-VN")} đ`,
     },
     {
@@ -291,12 +387,11 @@ const DormitoryRoomManagement = () => {
       key: "status",
       width: 120,
       render: (status) => {
-        let color = status === "active" ? "green" : "orange";
-        let text = status === "active" ? "Hoạt động" : "Bảo trì";
+        const isActive = status === "available" || status === "active";
         return (
           <Badge
-            status={status === "active" ? "success" : "warning"}
-            text={text}
+            status={isActive ? "success" : "warning"}
+            text={isActive ? "Hoạt động" : "Bảo trì"}
           />
         );
       },
@@ -319,7 +414,10 @@ const DormitoryRoomManagement = () => {
             <Button
               type="text"
               icon={<EditOutlined />}
-              onClick={() => console.log("Edit room:", record.id)}
+              onClick={() => {
+                setSelectedRoom(record);
+                setEditRoomModalVisible(true);
+              }}
             />
           </Tooltip>
         </Space>
@@ -330,6 +428,18 @@ const DormitoryRoomManagement = () => {
   const renderCardView = () => {
     const rooms = data?.data || [];
 
+    // Đối tượng chứa icon cho từng loại tiện ích
+    const amenityIcons = {
+      "Điều hòa": <FontAwesomeIcon icon={faSnowflake} />,
+      "Tủ lạnh": <FontAwesomeIcon icon={faIceCream} />,
+      "Máy giặt": <FontAwesomeIcon icon={faWater} />,
+      Tivi: <FontAwesomeIcon icon={faTv} />,
+      Wifi: <FontAwesomeIcon icon={faWifi} />,
+      "Bàn học": <FontAwesomeIcon icon={faDesktop} />,
+      "Tủ quần áo": <FontAwesomeIcon icon={faTshirt} />,
+      "Chăn ga gối": <FontAwesomeIcon icon={faBed} />,
+    };
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {rooms.map((room) => (
@@ -339,67 +449,141 @@ const DormitoryRoomManagement = () => {
             onClick={() => handleViewDetail(room.id)}
             className="shadow-sm hover:shadow-md transition-shadow"
             cover={
-              <div className="h-32 bg-gray-100 flex flex-col justify-center items-center">
+              <div className="h-32 bg-gray-100 flex flex-col justify-center items-center relative">
                 <HomeOutlined className="text-4xl text-blue-500" />
                 <div className="text-2xl font-bold mt-2">{room.roomNumber}</div>
+                {/* Hiển thị badge trạng thái ở góc trên bên phải */}
+                <div className="absolute top-2 right-2">
+                  <Badge
+                    status={
+                      room.status === "available" || room.status === "active"
+                        ? "success"
+                        : "warning"
+                    }
+                    text={
+                      room.status === "available" || room.status === "active"
+                        ? "Hoạt động"
+                        : "Bảo trì"
+                    }
+                  />
+                </div>
               </div>
             }
             actions={[
-              <Tooltip title="Xem chi tiết" key="view">
-                <EyeOutlined
-                  key="view"
+              <Tooltip title="Xem chi tiết phòng" key="view">
+                <Button
+                  type="link"
+                  icon={<EyeOutlined />}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleViewDetail(room.id);
                   }}
-                />
+                >
+                  Xem chi tiết
+                </Button>
               </Tooltip>,
-              <Tooltip title="Chỉnh sửa" key="edit">
-                <EditOutlined
-                  key="edit"
+              <Tooltip title="Chỉnh sửa thông tin phòng" key="edit">
+                <Button
+                  type="link"
+                  icon={<EditOutlined />}
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log("Edit room:", room.id);
+                    setSelectedRoom(room);
+                    setEditRoomModalVisible(true);
                   }}
-                />
+                >
+                  Chỉnh sửa
+                </Button>
               </Tooltip>,
             ]}
           >
-            <div className="mb-2">
-              <Tag
-                color={room.type === "nam" ? "blue" : "pink"}
-                className="mr-1"
-              >
-                {room.type === "nam" ? "Nam" : "Nữ"}
-              </Tag>
-              <Badge
-                status={room.status === "active" ? "success" : "warning"}
-                text={room.status === "active" ? "Hoạt động" : "Bảo trì"}
-              />
-            </div>
-
-            <div className="flex justify-between items-center mb-2">
-              <div className="text-gray-600">{room.buildingName}</div>
-              <div className="font-semibold">
-                {room.monthlyFee.toLocaleString("vi-VN")} đ/tháng
+            <div className="mb-3">
+              <div className="flex justify-between items-center">
+                <Tag
+                  color={room.roomType === "male" ? "blue" : "pink"}
+                  className="mr-1 px-2 py-1"
+                  icon={
+                    room.roomType === "male" ? (
+                      <ManOutlined />
+                    ) : (
+                      <WomanOutlined />
+                    )
+                  }
+                >
+                  {room.roomType === "male" ? "Nam" : "Nữ"}
+                </Tag>
+                <div className="font-semibold">
+                  {room.pricePerMonth.toLocaleString("vi-VN")} đ/tháng
+                </div>
               </div>
             </div>
 
-            <div className="mb-2">
-              <Progress
-                percent={Math.round((room.occupied / room.capacity) * 100)}
-                format={() => `${room.occupied}/${room.capacity}`}
-                status={room.occupied >= room.capacity ? "exception" : "active"}
-                size="small"
-              />
+            <div className="flex justify-between items-center mb-1">
+              <div className="text-gray-600 font-medium">
+                {room.buildingName}
+              </div>
+              <Tooltip
+                title={`${room.occupiedBeds} sinh viên đang ở / Sức chứa ${room.capacity} người`}
+              >
+                <div className="text-sm text-blue-500 font-medium">
+                  {room.occupiedBeds}/{room.capacity} <UserOutlined />
+                </div>
+              </Tooltip>
             </div>
 
-            <div className="text-xs">
-              {room.amenities.map((item) => (
-                <Tag key={item} size="small">
-                  {item}
-                </Tag>
-              ))}
+            {/* Cải tiến thanh progress */}
+            <div className="mb-3">
+              <Tooltip
+                title={`${room.occupiedBeds} sinh viên đang ở / Sức chứa ${room.capacity} người`}
+              >
+                <div className="flex items-center">
+                  <Progress
+                    percent={Math.round(
+                      (room.occupiedBeds / room.capacity) * 100
+                    )}
+                    format={() => `${room.occupiedBeds}/${room.capacity}`}
+                    status={
+                      room.occupiedBeds >= room.capacity
+                        ? "exception"
+                        : "active"
+                    }
+                    strokeColor={{
+                      "0%": "#108ee9",
+                      "100%":
+                        room.occupiedBeds >= room.capacity
+                          ? "#ff4d4f"
+                          : "#52c41a",
+                    }}
+                    strokeWidth={10}
+                  />
+                </div>
+              </Tooltip>
+
+              {/* Thêm text mô tả */}
+              <div className="text-xs text-gray-500 mt-1 text-center">
+                {room.occupiedBeds >= room.capacity
+                  ? "Phòng đã đầy"
+                  : `Còn trống ${room.capacity - room.occupiedBeds} chỗ`}
+              </div>
+            </div>
+
+            {/* Tiện ích với icon */}
+            <div className="border-t pt-2">
+              <div className="text-sm font-medium mb-1">Tiện ích:</div>
+              <div className="flex flex-wrap gap-1">
+                {(room.amenities || []).map((item) => (
+                  <Tooltip key={item} title={item}>
+                    <Badge
+                      count={
+                        <span className="flex items-center bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
+                          {amenityIcons[item] || <CheckOutlined />} {item}
+                        </span>
+                      }
+                      style={{ backgroundColor: "transparent" }}
+                    />
+                  </Tooltip>
+                ))}
+              </div>
             </div>
           </Card>
         ))}
@@ -484,9 +668,11 @@ const DormitoryRoomManagement = () => {
                 setPage(1);
               }}
             >
-              <Option value="Tòa nhà A">Tòa nhà A</Option>
-              <Option value="Tòa nhà B">Tòa nhà B</Option>
-              <Option value="Tòa nhà C">Tòa nhà C</Option>
+              {buildings.map((building) => (
+                <Option key={building.id} value={building.name}>
+                  {building.name}
+                </Option>
+              ))}
             </Select>
 
             <Select
@@ -605,7 +791,7 @@ const DormitoryRoomManagement = () => {
 
       <Modal
         title="Thêm phòng mới"
-        visible={addRoomModalVisible}
+        open={addRoomModalVisible}
         onOk={handleAddRoomSubmit}
         onCancel={() => setAddRoomModalVisible(false)}
         okText="Thêm phòng"
@@ -616,14 +802,16 @@ const DormitoryRoomManagement = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="buildingName"
+                name="buildingId"
                 label="Tòa nhà"
                 rules={[{ required: true, message: "Vui lòng chọn tòa nhà" }]}
               >
                 <Select placeholder="Chọn tòa nhà">
-                  <Option value="Tòa nhà A">Tòa nhà A</Option>
-                  <Option value="Tòa nhà B">Tòa nhà B</Option>
-                  <Option value="Tòa nhà C">Tòa nhà C</Option>
+                  {buildings.map((building) => (
+                    <Option key={building.id} value={building.id}>
+                      {building.name}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -640,7 +828,131 @@ const DormitoryRoomManagement = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="floor"
+                name="floorNumber"
+                label="Tầng"
+                rules={[{ required: true, message: "Vui lòng nhập tầng" }]}
+              >
+                <InputNumber
+                  min={1}
+                  max={20}
+                  style={{ width: "100%" }}
+                  placeholder="Nhập tầng"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="type"
+                label="Loại phòng"
+                rules={[
+                  { required: true, message: "Vui lòng chọn loại phòng" },
+                ]}
+              >
+                <Select placeholder="Chọn loại phòng">
+                  <Option value="nam">Nam</Option>
+                  <Option value="nữ">Nữ</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="capacity"
+                label="Sức chứa"
+                rules={[{ required: true, message: "Vui lòng nhập sức chứa" }]}
+              >
+                <InputNumber
+                  min={1}
+                  max={10}
+                  style={{ width: "100%" }}
+                  placeholder="Nhập sức chứa"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="monthlyFee"
+                label="Giá phòng (đồng/tháng)"
+                rules={[{ required: true, message: "Vui lòng nhập giá phòng" }]}
+              >
+                <InputNumber
+                  min={100000}
+                  max={2000000}
+                  step={50000}
+                  style={{ width: "100%" }}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  placeholder="Nhập giá phòng"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="amenities" label="Tiện ích">
+            <Select mode="multiple" placeholder="Chọn tiện ích">
+              <Option value="Điều hòa">Điều hòa</Option>
+              <Option value="Tủ lạnh">Tủ lạnh</Option>
+              <Option value="Máy giặt">Máy giặt</Option>
+              <Option value="Tivi">Tivi</Option>
+              <Option value="Wifi">Wifi</Option>
+              <Option value="Bàn học">Bàn học</Option>
+              <Option value="Tủ quần áo">Tủ quần áo</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="status" label="Trạng thái" initialValue="active">
+            <Radio.Group>
+              <Radio value="active">Hoạt động</Radio>
+              <Radio value="maintenance">Bảo trì</Radio>
+            </Radio.Group>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Chỉnh sửa phòng"
+        open={editRoomModalVisible}
+        onOk={handleEditRoom}
+        onCancel={() => setEditRoomModalVisible(false)}
+        width={600}
+        okText="Cập nhật"
+        cancelText="Hủy"
+      >
+        <Divider orientation="left">
+          Thông tin phòng {selectedRoom?.roomNumber}
+        </Divider>
+        <Form form={editForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="buildingId"
+                label="Tòa nhà"
+                rules={[{ required: true, message: "Vui lòng chọn tòa nhà" }]}
+              >
+                <Select placeholder="Chọn tòa nhà">
+                  {buildings.map((building) => (
+                    <Option key={building.id} value={building.id}>
+                      {building.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="roomNumber"
+                label="Số phòng"
+                rules={[{ required: true, message: "Vui lòng nhập số phòng" }]}
+              >
+                <Input placeholder="Nhập số phòng" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="floorNumber"
                 label="Tầng"
                 rules={[{ required: true, message: "Vui lòng nhập tầng" }]}
               >
