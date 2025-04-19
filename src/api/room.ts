@@ -195,8 +195,11 @@ const roomApi = {
     return response.data;
   },
 
-  updateInvoiceStatus: async (invoiceId: number, data: { status: string, paidDate?: string }) => {
-    const response = await axiosClient.put(`${API_URL}/invoices/${invoiceId}/status`, data);
+  updateInvoiceStatus: async (invoiceId: number, status: string) => {
+    const response = await axiosClient.put(`${API_URL}/invoices/${invoiceId}/status`, {
+      status,
+      paidDate: status === 'paid' ? new Date().toISOString().split('T')[0] : undefined
+    });
     return response.data;
   },
 };

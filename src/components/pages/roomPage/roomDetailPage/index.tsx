@@ -44,6 +44,9 @@ import {
   HistoryOutlined,
   StopOutlined,
   ExportOutlined,
+  DollarCircleOutlined,
+  LoadingOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import roomApi, { RoomDetail } from "@/api/room";
@@ -321,6 +324,36 @@ const RoomDetailPage = () => {
     }
   };
 
+  const handleUpdatePaymentStatus = async (invoiceId: number) => {
+    const key = "update-invoice-status";
+    notification.open({
+      message: "Đang cập nhật trạng thái hóa đơn",
+      description: "Vui lòng đợi trong giây lát...",
+      icon: <LoadingOutlined />,
+      key,
+    });
+
+    try {
+      await roomApi.updateInvoiceStatus(invoiceId, "paid");
+      notification.success({
+        message: "Cập nhật thành công",
+        description: "Đã cập nhật trạng thái thanh toán của hóa đơn",
+        key,
+      });
+
+      // Refresh dữ liệu
+      const updatedData = await roomApi.getRoomDetail(roomId);
+      setData(updatedData);
+    } catch (error: any) {
+      notification.error({
+        message: "Cập nhật thất bại",
+        description:
+          error.message || "Có lỗi xảy ra khi cập nhật trạng thái hóa đơn",
+        key,
+      });
+    }
+  };
+
   // Handle resident removal
   const showRemoveConfirm = (resident: any) => {
     Modal.confirm({
@@ -477,41 +510,6 @@ const RoomDetailPage = () => {
     }
   };
 
-  const handleUpdatePaymentStatus = async (invoiceId: number) => {
-    try {
-      const key = "updatePaymentStatus";
-      notification.open({
-        key,
-        message: "Đang cập nhật...",
-        description: "Đang cập nhật trạng thái thanh toán",
-        duration: 0,
-      });
-
-      // Gọi API cập nhật trạng thái hóa đơn
-      await roomApi.updateInvoiceStatus(invoiceId, {
-        status: "paid",
-        paidDate: new Date().toISOString().split("T")[0], // Ngày hôm nay
-      });
-
-      notification.success({
-        key,
-        message: "Thành công",
-        description: "Đã cập nhật trạng thái thanh toán thành công",
-      });
-
-      // Refresh dữ liệu
-      const updatedData = await roomApi.getRoomDetail(roomId);
-      setData(updatedData);
-    } catch (error) {
-      console.error("Error updating payment status:", error);
-      notification.error({
-        message: "Lỗi",
-        description:
-          "Không thể cập nhật trạng thái thanh toán. Vui lòng thử lại.",
-      });
-    }
-  };
-
   if (isLoading) {
     return (
       <div
@@ -568,6 +566,18 @@ const RoomDetailPage = () => {
     pendingRequests = [],
     utilities = [],
   } = data;
+
+  // Sort utility bills by creation date (newest first)
+  const sortedUtilities = [...utilities].sort((a: any, b: any) => {
+    // Use createdAt if available, otherwise use month
+    const dateA = a.createdAt
+      ? new Date(a.createdAt).getTime()
+      : new Date(a.month).getTime();
+    const dateB = b.createdAt
+      ? new Date(b.createdAt).getTime()
+      : new Date(b.month).getTime();
+    return dateB - dateA; // Sort descending (newest first)
+  });
 
   // Column definitions for residents table
   const residentColumns = [
@@ -802,6 +812,8 @@ const RoomDetailPage = () => {
       title: "Tháng",
       dataIndex: "month",
       key: "month",
+      sorter: (a: any, b: any) =>
+        new Date(b.month).getTime() - new Date(a.month).getTime(),
     },
     {
       title: "Điện (kWh)",
@@ -1163,19 +1175,13 @@ const RoomDetailPage = () => {
               key: "utilities",
               label: (
                 <span>
-                  <CalendarOutlined /> Hóa đơn tiện ích
+                  <CreditCardOutlined /> Hóa đơn tiện ích
                 </span>
               ),
               children: (
-                <>
-                  <div
-                    style={{
-                      marginBottom: "16px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <h3>Hóa đơn tiện ích</h3>
+                <Card
+                  title="Hóa đơn tiện ích"
+                  extra={
                     <Button
                       type="primary"
                       icon={<PlusOutlined />}
@@ -1183,24 +1189,18 @@ const RoomDetailPage = () => {
                     >
                       Thêm hóa đơn
                     </Button>
-                  </div>
-                  {utilities && utilities.length > 0 ? (
-                    <Table
-                      columns={utilityColumns}
-                      dataSource={[...utilities].sort((a, b) => {
-                        // Sắp xếp theo thời gian tạo hóa đơn - mới nhất lên đầu
-                        return (
-                          new Date(b.createdAt || 0).getTime() -
-                          new Date(a.createdAt || 0).getTime()
-                        );
-                      })}
-                      rowKey="id"
-                      pagination={false}
-                    />
-                  ) : (
-                    <Empty description="Không có hóa đơn tiện ích" />
-                  )}
-                </>
+                  }
+                  style={{ marginBottom: "20px" }}
+                >
+                  <Table
+                    columns={utilityColumns}
+                    dataSource={sortedUtilities}
+                    rowKey="id"
+                    size="middle"
+                    pagination={false}
+                    scroll={{ x: "max-content" }}
+                  />
+                </Card>
               ),
             },
           ]}
@@ -1665,7 +1665,7 @@ const RoomDetailPage = () => {
                 ]}
               >
                 <Select>
-                  <Select.Option value="unpaid">Chưa thanh toán</Select.Option>
+                  <Select.Option value="pending">Chưa thanh toán</Select.Option>
                   <Select.Option value="paid">Đã thanh toán</Select.Option>
                 </Select>
               </Form.Item>
@@ -1682,10 +1682,7 @@ const RoomDetailPage = () => {
               }),
             ]}
           >
-            <Input
-              type="date"
-              disabled={form.getFieldValue("status") !== "paid"}
-            />
+            <Input type="date" />
           </Form.Item>
         </Form>
       </Modal>
