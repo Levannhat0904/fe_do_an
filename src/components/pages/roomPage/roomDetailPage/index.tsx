@@ -112,39 +112,87 @@ const RoomDetailPage = () => {
   const handleSaveRoom = async () => {
     try {
       const values = await form.validateFields();
+      console.log("Form values:", values);
+
       const formData = new FormData();
 
-      // Append form values to formData
-      Object.keys(values).forEach((key) => {
-        if (key === "type") {
-          formData.append(
-            "roomType",
-            values[key] === "nam" ? "male" : "female"
-          );
-        } else if (key === "amenities" && Array.isArray(values[key])) {
-          formData.append("amenities", JSON.stringify(values[key]));
-        } else {
-          formData.append(key, values[key]);
-        }
+      // Map form fields to API expected fields
+      if (data?.room.buildingId) {
+        formData.append("buildingId", data.room.buildingId.toString());
+      }
+
+      // Required fields
+      formData.append("roomNumber", values.roomNumber);
+      formData.append("floorNumber", values.floor.toString());
+      formData.append("roomType", values.type === "nam" ? "male" : "female");
+      formData.append("capacity", values.capacity.toString());
+      formData.append("pricePerMonth", values.monthlyFee.toString());
+
+      // Optional fields
+      if (values.description) {
+        formData.append("description", values.description);
+      }
+
+      if (values.amenities && Array.isArray(values.amenities)) {
+        formData.append("amenities", JSON.stringify(values.amenities));
+      }
+
+      if (values.notes) {
+        formData.append("notes", values.notes);
+      }
+
+      if (values.roomArea) {
+        formData.append("roomArea", values.roomArea.toString());
+      }
+
+      // Keep current status
+      if (data?.room.status) {
+        formData.append("status", data.room.status);
+      }
+
+      // Always keep existing images
+      formData.append("keepExisting", "true");
+
+      // Log the form data in a more compatible way
+      console.log("Form data to be sent:", Object.fromEntries(formData));
+
+      // Show loading message
+      const key = "updateRoom";
+      notification.open({
+        key,
+        message: "Đang cập nhật...",
+        description: "Đang cập nhật thông tin phòng",
+        duration: 0,
       });
 
-      await roomApi.updateRoom(roomId, formData);
+      try {
+        const response = await roomApi.updateRoom(roomId, formData);
+        console.log("Update response:", response);
 
-      notification.success({
-        message: "Thành công",
-        description: "Cập nhật thông tin phòng thành công",
-      });
+        notification.success({
+          key,
+          message: "Thành công",
+          description: "Cập nhật thông tin phòng thành công",
+        });
 
-      // Refresh data
-      const updatedData = await roomApi.getRoomDetail(roomId);
-      setData(updatedData);
+        // Refresh data
+        const updatedData = await roomApi.getRoomDetail(roomId);
+        setData(updatedData);
 
-      setEditModalVisible(false);
+        setEditModalVisible(false);
+      } catch (apiError) {
+        console.error("API error:", apiError);
+        notification.error({
+          key,
+          message: "Lỗi",
+          description: "Không thể cập nhật thông tin phòng. Vui lòng thử lại.",
+        });
+      }
     } catch (error) {
-      console.error("Error updating room:", error);
+      console.error("Form validation error:", error);
       notification.error({
-        message: "Lỗi",
-        description: "Không thể cập nhật thông tin phòng",
+        message: "Lỗi dữ liệu",
+        description: "Vui lòng kiểm tra lại thông tin nhập vào",
       });
     }
   };
@@ -172,15 +220,50 @@ const RoomDetailPage = () => {
     setAddMaintenanceModalVisible(true);
   };
 
-  const handleSaveMaintenance = () => {
-    form.validateFields().then((values) => {
-      // Call API to add maintenance record
+  const handleSaveMaintenance = async () => {
+    try {
+      const values = await form.validateFields();
+      const key = "addMaintenance";
+
+      notification.open({
+        key,
+        message: "Đang thêm...",
+        description: "Đang thêm bảo trì mới",
+        duration: 0,
+      });
+
+      // Tạo dữ liệu cho API
+      const maintenanceData = {
+        roomId: roomId,
+        requestType: values.type,
+        description: values.description,
+        cost: values.cost,
+        staff: values.staff,
+        status: values.status,
+        date: values.date, // Ngày thực hiện
+      };
+
+      // Gọi API thêm bảo trì
+      const response = await roomApi.addMaintenance(roomId, maintenanceData);
+
       notification.success({
+        key,
         message: "Thêm bảo trì thành công",
         description: `Đã thêm lịch bảo trì cho phòng ${data?.room.roomNumber}`,
       });
+
+      // Refresh dữ liệu
+      const updatedData = await roomApi.getRoomDetail(roomId);
+      setData(updatedData);
+
       setAddMaintenanceModalVisible(false);
-    });
+    } catch (error) {
+      console.error("Error adding maintenance:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể thêm bảo trì. Vui lòng thử lại.",
+      });
+    }
   };
 
   // Add utility handler
@@ -189,15 +272,53 @@ const RoomDetailPage = () => {
     setAddUtilityModalVisible(true);
   };
 
-  const handleSaveUtility = () => {
-    form.validateFields().then((values) => {
-      // Call API to add utility record
+  const handleSaveUtility = async () => {
+    try {
+      const values = await form.validateFields();
+      const key = "addUtility";
+
+      notification.open({
+        key,
+        message: "Đang thêm...",
+        description: "Đang thêm hóa đơn tiện ích",
+        duration: 0,
+      });
+
+      // Tạo dữ liệu cho API
+      const utilityData = {
+        roomId: roomId,
+        month: values.month,
+        electricity: values.electricity,
+        water: values.water,
+        electricityCost: values.electricityCost,
+        waterCost: values.waterCost,
+        otherFees: values.otherFees,
+        dueDate: values.dueDate,
+        status: values.status,
+        paidDate: values.status === "paid" ? values.paidDate : null,
+      };
+
+      // Gọi API thêm hóa đơn
+      const response = await roomApi.addUtility(roomId, utilityData);
+
       notification.success({
+        key,
         message: "Thêm hóa đơn thành công",
         description: `Đã thêm hóa đơn tiện ích tháng ${values.month} cho phòng ${data?.room.roomNumber}`,
       });
+
+      // Refresh dữ liệu
+      const updatedData = await roomApi.getRoomDetail(roomId);
+      setData(updatedData);
+
       setAddUtilityModalVisible(false);
-    });
+    } catch (error) {
+      console.error("Error adding utility:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể thêm hóa đơn tiện ích. Vui lòng thử lại.",
+      });
+    }
   };
 
   // Handle resident removal
@@ -209,12 +330,35 @@ const RoomDetailPage = () => {
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
-      onOk() {
-        // Call API to remove resident
-        notification.success({
-          message: "Xóa thành công",
-          description: `Đã xóa sinh viên ${resident.fullName} khỏi phòng ${data?.room.roomNumber}`,
-        });
+      onOk: async () => {
+        try {
+          const key = "removeResident";
+          notification.open({
+            key,
+            message: "Đang xóa...",
+            description: "Đang xóa sinh viên khỏi phòng",
+            duration: 0,
+          });
+
+          // Gọi API xóa sinh viên
+          await roomApi.removeResident(roomId, resident.id);
+
+          notification.success({
+            key,
+            message: "Xóa thành công",
+            description: `Đã xóa sinh viên ${resident.fullName} khỏi phòng ${data?.room.roomNumber}`,
+          });
+
+          // Refresh dữ liệu
+          const updatedData = await roomApi.getRoomDetail(roomId);
+          setData(updatedData);
+        } catch (error) {
+          console.error("Error removing resident:", error);
+          notification.error({
+            message: "Lỗi",
+            description: "Không thể xóa sinh viên. Vui lòng thử lại.",
+          });
+        }
       },
     });
   };
@@ -231,11 +375,25 @@ const RoomDetailPage = () => {
       cancelText: "Không",
       async onOk() {
         try {
-          await roomApi.processMaintenanceRequest(
-            request.id,
-            request.status === "pending" ? "processing" : "completed"
+          const key = "processRequest";
+          notification.open({
+            key,
+            message: "Đang cập nhật...",
+            description: "Đang cập nhật trạng thái yêu cầu",
+            duration: 0,
+          });
+
+          const newStatus =
+            request.status === "pending" ? "processing" : "completed";
+          await roomApi.processMaintenanceRequest(request.id, newStatus);
+
+          // Cập nhật trạng thái trong UI trước khi refresh data
+          const updatedRequests = pendingRequests.map((req) =>
+            req.id === request.id ? { ...req, status: newStatus } : req
           );
+
           notification.success({
+            key,
             message: "Thành công",
             description: "Cập nhật trạng thái yêu cầu thành công",
           });
@@ -279,6 +437,78 @@ const RoomDetailPage = () => {
         return <Tag color="pink">Đang bảo trì</Tag>;
       default:
         return <Tag color="default">{status}</Tag>;
+    }
+  };
+
+  // Thêm hàm xử lý bên trong component RoomDetailPage
+  const handleToggleRoomStatus = async (newStatus: string) => {
+    try {
+      const key = "updateRoomStatus";
+      notification.open({
+        key,
+        message: "Đang cập nhật...",
+        description: `Đang ${
+          newStatus === "available" ? "kích hoạt" : "chuyển sang chế độ bảo trì"
+        } phòng`,
+        duration: 0,
+      });
+
+      // Gọi API patch status room
+      await roomApi.updateRoomStatus(roomId, newStatus);
+
+      notification.success({
+        key,
+        message: "Thành công",
+        description: `Đã ${
+          newStatus === "available" ? "kích hoạt" : "chuyển sang chế độ bảo trì"
+        } phòng thành công`,
+      });
+
+      // Refresh data
+      const updatedData = await roomApi.getRoomDetail(roomId);
+      setData(updatedData);
+    } catch (error) {
+      console.error("Error updating room status:", error);
+      notification.error({
+        message: "Lỗi",
+        description:
+          "Không thể cập nhật trạng thái phòng. Vui lòng thử lại sau.",
+      });
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (invoiceId: number) => {
+    try {
+      const key = "updatePaymentStatus";
+      notification.open({
+        key,
+        message: "Đang cập nhật...",
+        description: "Đang cập nhật trạng thái thanh toán",
+        duration: 0,
+      });
+
+      // Gọi API cập nhật trạng thái hóa đơn
+      await roomApi.updateInvoiceStatus(invoiceId, {
+        status: "paid",
+        paidDate: new Date().toISOString().split("T")[0], // Ngày hôm nay
+      });
+
+      notification.success({
+        key,
+        message: "Thành công",
+        description: "Đã cập nhật trạng thái thanh toán thành công",
+      });
+
+      // Refresh dữ liệu
+      const updatedData = await roomApi.getRoomDetail(roomId);
+      setData(updatedData);
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      notification.error({
+        message: "Lỗi",
+        description:
+          "Không thể cập nhật trạng thái thanh toán. Vui lòng thử lại.",
+      });
     }
   };
 
@@ -547,6 +777,17 @@ const RoomDetailPage = () => {
               Xử lý
             </Button>
           )}
+          {record.status === "processing" && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckCircleOutlined />}
+              style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
+              onClick={() => handleProcessRequest(record)}
+            >
+              Hoàn thành
+            </Button>
+          )}
           <Button size="small" icon={<EditOutlined />}>
             Chi tiết
           </Button>
@@ -611,11 +852,15 @@ const RoomDetailPage = () => {
           return (
             <Badge
               status="success"
-              text={`Đã thanh toán (${formatDate(record.paidDate)})`}
+              text={`Đã thanh toán ${
+                record.paidDate ? `(${formatDate(record.paidDate)})` : ""
+              }`}
             />
           );
+        } else if (status === "pending") {
+          return <Badge status="warning" text="Đang chờ thanh toán" />;
         } else {
-          return <Badge status="error" text="Chưa thanh toán" />;
+          return <Badge status="error" text="Quá hạn" />;
         }
       },
     },
@@ -624,8 +869,13 @@ const RoomDetailPage = () => {
       key: "action",
       render: (_: unknown, record: any) => (
         <Space size="small">
-          {record.status === "unpaid" && (
-            <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
+          {record.status !== "paid" && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckCircleOutlined />}
+              onClick={() => handleUpdatePaymentStatus(record.id)}
+            >
               Đánh dấu đã thu
             </Button>
           )}
@@ -669,11 +919,19 @@ const RoomDetailPage = () => {
               Chỉnh sửa thông tin
             </Button>
             {room.status === "maintenance" ? (
-              <Button icon={<CheckCircleOutlined />} type="primary">
+              <Button
+                icon={<CheckCircleOutlined />}
+                type="primary"
+                onClick={() => handleToggleRoomStatus("available")}
+              >
                 Kích hoạt lại
               </Button>
             ) : (
-              <Button icon={<StopOutlined />} danger>
+              <Button
+                icon={<StopOutlined />}
+                danger
+                onClick={() => handleToggleRoomStatus("maintenance")}
+              >
                 Đánh dấu bảo trì
               </Button>
             )}
@@ -929,7 +1187,13 @@ const RoomDetailPage = () => {
                   {utilities && utilities.length > 0 ? (
                     <Table
                       columns={utilityColumns}
-                      dataSource={utilities}
+                      dataSource={[...utilities].sort((a, b) => {
+                        // Sắp xếp theo thời gian tạo hóa đơn - mới nhất lên đầu
+                        return (
+                          new Date(b.createdAt || 0).getTime() -
+                          new Date(a.createdAt || 0).getTime()
+                        );
+                      })}
                       rowKey="id"
                       pagination={false}
                     />

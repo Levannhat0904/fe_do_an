@@ -18,32 +18,32 @@ export const adminRouters: MenuProps["items"] = [
   },
   {
     label: "Đăng ký nội trú",
-    key: "dang-ky-noi-tru",
+    key: "/dang-ky-noi-tru",
     icon: <SIconGrid />,
   },
   {
     label: "Quản lý đăng ký",
-    key: "quan-ly-don-dang-ky",
+    key: "/quan-ly-don-dang-ky",
     icon: <SIconGrid />,
   },
   {
     label: "Quản lý sinh viên",
-    key: "quan-ly-sinh-vien",
+    key: "/quan-ly-sinh-vien",
     icon: <SIconGrid />,
   },
   {
     label: "Quản lý hợp đồng",
-    key: "quan-ly-hop-dong",
+    key: "/quan-ly-hop-dong",
     icon: <SIconShop />,
   },
   {
     label: "Quản lý phòng",
-    key: "quan-ly-phong",
+    key: "/quan-ly-phong",
     icon: <SIconBadge />,
   },
   {
     label: "Quản lý hóa đơn",
-    key: "quan-ly-hoa-don",
+    key: "/quan-ly-hoa-don",
     icon: <SIconIdCard />,
   },
 ];
@@ -55,27 +55,27 @@ export const studentRouters: MenuProps["items"] = [
   },
   {
     label: "Đăng ký nội trú",
-    key: "dang-ky-noi-tru",
+    key: "/dang-ky-noi-tru",
     icon: <SIconGrid />,
   },
   {
     label: "Quản lý đăng ký",
-    key: "quan-ly-don-dang-ky",
+    key: "/quan-ly-don-dang-ky",
     icon: <SIconGrid />,
   },
   {
     label: "Quản lý sinh viên",
-    key: "quan-ly-sinh-vien",
+    key: "/quan-ly-sinh-vien",
     icon: <SIconGrid />,
   },
   {
     label: "Quản lý hợp đồng",
-    key: "quan-ly-hop-dong",
+    key: "/quan-ly-hop-dong",
     icon: <SIconShop />,
   },
   {
     label: "Quản lý phòng",
-    key: "quan-ly-phong",
+    key: "/quan-ly-phong",
     icon: <SIconBadge />,
   },
   {

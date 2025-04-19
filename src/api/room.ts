@@ -120,6 +120,8 @@ export interface RoomDetail {
     otherFees: number;
     totalCost: number;
     status: string;
+    createdAt?: string;
+    paidDate?: string;
   }[];
 }
 
@@ -166,7 +168,7 @@ const roomApi = {
   },
 
   processMaintenanceRequest: async (requestId: number, status: string, notes?: string) => {
-    const response = await axiosClient.put(`${API_URL}/maintenance-requests/${requestId}`, {
+    const response = await axiosClient.put(`${API_URL}/rooms/maintenance-requests/${requestId}`, {
       status,
       notes
     });
@@ -186,7 +188,17 @@ const roomApi = {
   addUtility: async (roomId: number, utilityData: any) => {
     const response = await axiosClient.post(`${API_URL}/rooms/${roomId}/utilities`, utilityData);
     return response.data;
-  }
+  },
+
+  updateRoomStatus: async (id: number, status: string) => {
+    const response = await axiosClient.put(`${API_URL}/rooms/${id}/status`, { status });
+    return response.data;
+  },
+
+  updateInvoiceStatus: async (invoiceId: number, data: { status: string, paidDate?: string }) => {
+    const response = await axiosClient.put(`${API_URL}/invoices/${invoiceId}/status`, data);
+    return response.data;
+  },
 };
 
 export default roomApi; 
