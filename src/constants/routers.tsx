@@ -51,6 +51,11 @@ export const adminRouters: MenuProps["items"] = [
     key: "/quan-ly-hoa-don",
     icon: <SIconIdCard />,
   },
+  {
+    label: "Tra cứu hóa đơn",
+    key: "/tra-cuu-hoa-don",
+    icon: <SIconIdCard />,
+  },
 ];
 export const studentRouters: MenuProps["items"] = [
   {

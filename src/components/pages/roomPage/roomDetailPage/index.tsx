@@ -28,6 +28,7 @@ import {
   List,
   Avatar,
   Result,
+  DatePicker,
 } from "antd";
 import {
   HomeOutlined,
@@ -47,9 +48,12 @@ import {
   DollarCircleOutlined,
   LoadingOutlined,
   CreditCardOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import roomApi, { RoomDetail } from "@/api/room";
+import invoiceApi from "@/api/invoice";
+import { DATE_FORMAT, DATE_FORMAT_API, MONTH_FORMAT } from "../../billPage";
 
 interface RoomDetailData extends RoomDetail {}
 
@@ -68,6 +72,7 @@ const RoomDetailPage = () => {
   const [addMaintenanceModalVisible, setAddMaintenanceModalVisible] =
     useState(false);
   const [addUtilityModalVisible, setAddUtilityModalVisible] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -275,55 +280,6 @@ const RoomDetailPage = () => {
     setAddUtilityModalVisible(true);
   };
 
-  const handleSaveUtility = async () => {
-    try {
-      const values = await form.validateFields();
-      const key = "addUtility";
-
-      notification.open({
-        key,
-        message: "Đang thêm...",
-        description: "Đang thêm hóa đơn tiện ích",
-        duration: 0,
-      });
-
-      // Tạo dữ liệu cho API
-      const utilityData = {
-        roomId: roomId,
-        month: values.month,
-        electricity: values.electricity,
-        water: values.water,
-        electricityCost: values.electricityCost,
-        waterCost: values.waterCost,
-        otherFees: values.otherFees,
-        dueDate: values.dueDate,
-        status: values.status,
-        paidDate: values.status === "paid" ? values.paidDate : null,
-      };
-
-      // Gọi API thêm hóa đơn
-      const response = await roomApi.addUtility(roomId, utilityData);
-
-      notification.success({
-        key,
-        message: "Thêm hóa đơn thành công",
-        description: `Đã thêm hóa đơn tiện ích tháng ${values.month} cho phòng ${data?.room.roomNumber}`,
-      });
-
-      // Refresh dữ liệu
-      const updatedData = await roomApi.getRoomDetail(roomId);
-      setData(updatedData);
-
-      setAddUtilityModalVisible(false);
-    } catch (error) {
-      console.error("Error adding utility:", error);
-      notification.error({
-        message: "Lỗi",
-        description: "Không thể thêm hóa đơn tiện ích. Vui lòng thử lại.",
-      });
-    }
-  };
-
   const handleUpdatePaymentStatus = async (invoiceId: number) => {
     const key = "update-invoice-status";
     notification.open({
@@ -334,7 +290,8 @@ const RoomDetailPage = () => {
     });
 
     try {
-      await roomApi.updateInvoiceStatus(invoiceId, "paid");
+      // Sử dụng invoiceApi thay vì roomApi
+      await invoiceApi.updateInvoiceStatus(invoiceId, "paid");
       notification.success({
         message: "Cập nhật thành công",
         description: "Đã cập nhật trạng thái thanh toán của hóa đơn",
@@ -350,6 +307,139 @@ const RoomDetailPage = () => {
         description:
           error.message || "Có lỗi xảy ra khi cập nhật trạng thái hóa đơn",
         key,
+      });
+    }
+  };
+
+  // Handle edit invoice
+  const handleEditInvoice = async (invoice: any) => {
+    try {
+      // Get detailed invoice data first
+      const response = await invoiceApi.getInvoiceById(invoice.id);
+      if (response.success) {
+        const invoiceDetail = response.data;
+
+        // Set selected invoice
+        form.resetFields();
+        form.setFieldsValue({
+          invoiceMonth: dayjs(invoiceDetail.invoiceMonth),
+          electricity:
+            invoiceDetail.electricity ||
+            Math.round(invoiceDetail.electricFee / 2000),
+          water:
+            invoiceDetail.water || Math.round(invoiceDetail.waterFee / 10000),
+          serviceFee: invoiceDetail.serviceFee || 100000,
+          dueDate: dayjs(invoiceDetail.dueDate),
+        });
+
+        setSelectedInvoice(invoiceDetail);
+        setAddUtilityModalVisible(true);
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể tải thông tin hóa đơn",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching invoice details:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể tải thông tin hóa đơn",
+      });
+    }
+  };
+
+  // Update handleSaveUtility to handle both add and update
+  const handleSaveUtility = async () => {
+    try {
+      const values = await form.validateFields();
+      const key = selectedInvoice ? "updateUtility" : "addUtility";
+
+      notification.open({
+        key,
+        message: selectedInvoice ? "Đang cập nhật..." : "Đang thêm...",
+        description: selectedInvoice
+          ? "Đang cập nhật hóa đơn tiện ích"
+          : "Đang thêm hóa đơn tiện ích",
+        duration: 0,
+      });
+
+      // Calculate utility fees
+      const electricity = Number(values.electricity);
+      const water = Number(values.water);
+      const electricFee = electricity * 2000; // 2000 VND per kWh
+      const waterFee = water * 10000; // 10000 VND per m3
+      const serviceFee = Number(values.serviceFee || 100000);
+
+      // Get room details if needed
+      let roomFee = 0;
+      if (selectedInvoice) {
+        roomFee = selectedInvoice.roomFee;
+      } else if (data?.room) {
+        roomFee = data.room.pricePerMonth;
+      }
+
+      // Calculate total
+      const totalAmount = roomFee + electricFee + waterFee + serviceFee;
+
+      // Tạo dữ liệu cho API
+      const invoiceData = {
+        invoiceMonth: values.invoiceMonth.format(DATE_FORMAT_API),
+        dueDate: values.dueDate.format(DATE_FORMAT_API),
+        electricity,
+        water,
+        electricFee,
+        waterFee,
+        serviceFee,
+        roomFee,
+        totalAmount,
+      };
+
+      let response;
+
+      if (selectedInvoice) {
+        // Update existing invoice
+        response = await invoiceApi.updateInvoice(
+          selectedInvoice.id,
+          invoiceData
+        );
+      } else {
+        // Create new invoice
+        response = await invoiceApi.createInvoice(roomId, invoiceData);
+      }
+
+      if (response.success) {
+        notification.success({
+          key,
+          message: selectedInvoice
+            ? "Cập nhật hóa đơn thành công"
+            : "Thêm hóa đơn thành công",
+          description: selectedInvoice
+            ? `Đã cập nhật hóa đơn tiện ích tháng ${values.invoiceMonth.format(
+                MONTH_FORMAT
+              )} cho phòng ${data?.room.roomNumber}`
+            : `Đã thêm hóa đơn tiện ích tháng ${values.invoiceMonth.format(
+                MONTH_FORMAT
+              )} cho phòng ${data?.room.roomNumber}`,
+        });
+
+        // Refresh dữ liệu
+        const updatedData = await roomApi.getRoomDetail(roomId);
+        setData(updatedData);
+
+        setAddUtilityModalVisible(false);
+        setSelectedInvoice(null);
+      } else {
+        throw new Error(response.message || "Có lỗi xảy ra khi xử lý hóa đơn");
+      }
+    } catch (error) {
+      console.error("Error processing utility:", error);
+      notification.error({
+        message: "Lỗi",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Không thể xử lý hóa đơn tiện ích. Vui lòng thử lại.",
       });
     }
   };
@@ -454,10 +544,7 @@ const RoomDetailPage = () => {
   // Format currency
   const formatCurrency = (amount: number | undefined) => {
     if (amount === undefined) return "N/A";
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount);
+    return new Intl.NumberFormat("vi-VN").format(amount) + " VNĐ";
   };
 
   const getRoomStatusTag = (status: string) => {
@@ -508,6 +595,290 @@ const RoomDetailPage = () => {
           "Không thể cập nhật trạng thái phòng. Vui lòng thử lại sau.",
       });
     }
+  };
+
+  // Handle invoice printing
+  const handlePrint = (invoice: any) => {
+    try {
+      notification.info({
+        message: "Đang chuẩn bị in",
+        description: `Đang tạo hóa đơn ${invoice.invoiceNumber} để in...`,
+        duration: 2,
+      });
+
+      // Get invoice details if needed
+      if (!invoice.electricFee || !invoice.waterFee) {
+        fetchInvoiceDetailsForPrint(invoice.id);
+        return;
+      }
+
+      // Create a new window for printing
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        notification.error({
+          message: "Lỗi",
+          description:
+            "Không thể mở cửa sổ in. Vui lòng kiểm tra cài đặt trình duyệt của bạn.",
+        });
+        return;
+      }
+
+      // Format the invoice data
+      const invoiceHtml = generateInvoiceHtml(invoice);
+
+      // Write to the new window
+      printWindow.document.write(invoiceHtml);
+      printWindow.document.close();
+
+      // Call print after a short delay to ensure content is fully loaded
+      setTimeout(() => {
+        printWindow.print();
+        // Close window after printing (browser dependent)
+        printWindow.onafterprint = () => {
+          printWindow.close();
+        };
+      }, 500);
+    } catch (error) {
+      console.error("Error printing invoice:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể in hóa đơn. Vui lòng thử lại sau.",
+      });
+    }
+  };
+
+  // Fetch invoice details specifically for printing
+  const fetchInvoiceDetailsForPrint = async (id: number) => {
+    try {
+      const response = await invoiceApi.getInvoiceById(id);
+      if (response.success) {
+        handlePrint(response.data);
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể tải thông tin hóa đơn để in.",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching invoice for print:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể tải thông tin hóa đơn để in.",
+      });
+    }
+  };
+
+  // Generate HTML for invoice printing
+  const generateInvoiceHtml = (invoice: any) => {
+    const formattedDate = dayjs().format("DD/MM/YYYY HH:mm:ss");
+    const invoiceMonth = dayjs(invoice.invoiceMonth).format("MM/YYYY");
+    const dueDate = dayjs(invoice.dueDate).format("DD/MM/YYYY");
+
+    const statusText = {
+      pending: "Chờ thanh toán",
+      paid: "Đã thanh toán",
+      overdue: "Quá hạn",
+    };
+
+    return `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <title>Hóa đơn ${invoice.invoiceNumber}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+          }
+          .invoice-header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .invoice-header h1 {
+            color: #1890ff;
+            margin-bottom: 5px;
+          }
+          .invoice-details {
+            margin-bottom: 30px;
+          }
+          .invoice-details table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .invoice-details th, .invoice-details td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+          }
+          .invoice-items {
+            margin-bottom: 30px;
+          }
+          .invoice-items table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .invoice-items th, .invoice-items td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+          }
+          .invoice-items th {
+            background-color: #f8f8f8;
+          }
+          .invoice-total {
+            text-align: right;
+            font-size: 18px;
+            margin-top: 20px;
+          }
+          .invoice-footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+          }
+          .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+          }
+          .status-pending {
+            background-color: #fff7e6;
+            color: #fa8c16;
+          }
+          .status-paid {
+            background-color: #f6ffed;
+            color: #52c41a;
+          }
+          .status-overdue {
+            background-color: #fff1f0;
+            color: #f5222d;
+          }
+          @media print {
+            body {
+              padding: 0;
+              font-size: 12pt;
+            }
+            .no-print {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-header">
+          <h1>HÓA ĐƠN KÝ TÚC XÁ</h1>
+          <p>Số hóa đơn: ${invoice.invoiceNumber}</p>
+          <p>Ngày in: ${formattedDate}</p>
+        </div>
+        
+        <div class="invoice-details">
+          <table>
+            <tr>
+              <th style="width: 30%;">Thông tin phòng:</th>
+              <td>${invoice.roomNumber || ""} (Tầng ${
+      invoice.floorNumber || ""
+    }, Tòa ${invoice.buildingName || ""})</td>
+            </tr>
+            <tr>
+              <th>Sinh viên:</th>
+              <td>${invoice.fullName || "Chưa có sinh viên"} ${
+      invoice.studentCode ? `(${invoice.studentCode})` : ""
+    }</td>
+            </tr>
+            <tr>
+              <th>Kỳ hóa đơn:</th>
+              <td>${invoiceMonth}</td>
+            </tr>
+            <tr>
+              <th>Ngày đến hạn:</th>
+              <td>${dueDate}</td>
+            </tr>
+            <tr>
+              <th>Trạng thái:</th>
+              <td>
+                <span class="status status-${invoice.paymentStatus}">
+                  ${
+                    statusText[invoice.paymentStatus as keyof typeof statusText]
+                  }
+                </span>
+              </td>
+            </tr>
+            ${
+              invoice.paymentDate
+                ? `
+            <tr>
+              <th>Ngày thanh toán:</th>
+              <td>${dayjs(invoice.paymentDate).format("DD/MM/YYYY")}</td>
+            </tr>`
+                : ""
+            }
+          </table>
+        </div>
+        
+        <div class="invoice-items">
+          <h2>Chi tiết hóa đơn</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Mục</th>
+                <th>Chi tiết</th>
+                <th style="text-align: right;">Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Tiền phòng</td>
+                <td></td>
+                <td style="text-align: right;">${formatCurrency(
+                  invoice.roomFee
+                )}</td>
+              </tr>
+              <tr>
+                <td>Tiền điện</td>
+                <td>${invoice.electricity} kWh x 2,000 VNĐ</td>
+                <td style="text-align: right;">${formatCurrency(
+                  invoice.electricFee
+                )}</td>
+              </tr>
+              <tr>
+                <td>Tiền nước</td>
+                <td>${invoice.water} m³ x 10,000 VNĐ</td>
+                <td style="text-align: right;">${formatCurrency(
+                  invoice.waterFee
+                )}</td>
+              </tr>
+              <tr>
+                <td>Phí dịch vụ</td>
+                <td></td>
+                <td style="text-align: right;">${formatCurrency(
+                  invoice.serviceFee
+                )}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="invoice-total">
+            <p><strong>Tổng cộng: ${formatCurrency(
+              invoice.totalAmount
+            )}</strong></p>
+          </div>
+        </div>
+        
+        <div class="invoice-footer">
+          <p>Đây là hóa đơn điện tử được in từ hệ thống quản lý ký túc xá.</p>
+          <p>Vui lòng liên hệ quản lý nếu có thắc mắc về hóa đơn này.</p>
+        </div>
+        
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+          <button onclick="window.print()">In hóa đơn</button>
+          <button onclick="window.close()">Đóng</button>
+        </div>
+      </body>
+      </html>
+    `;
   };
 
   if (isLoading) {
@@ -819,11 +1190,13 @@ const RoomDetailPage = () => {
       title: "Điện (kWh)",
       dataIndex: "electricity",
       key: "electricity",
+      render: (value: number) => Number(value),
     },
     {
       title: "Nước (m³)",
       dataIndex: "water",
       key: "water",
+      render: (value: number) => Number(value),
     },
     {
       title: "Chi phí điện",
@@ -891,7 +1264,18 @@ const RoomDetailPage = () => {
               Đánh dấu đã thu
             </Button>
           )}
-          <Button size="small" icon={<ExportOutlined />}>
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEditInvoice(record)}
+          >
+            Chỉnh sửa
+          </Button>
+          <Button
+            size="small"
+            icon={<ExportOutlined />}
+            onClick={() => handlePrint(record)}
+          >
             Xuất hóa đơn
           </Button>
         </Space>
@@ -1284,7 +1668,9 @@ const RoomDetailPage = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  parser={(value) =>
+                    value ? Number(value.replace(/\$\s?|(,*)/g, "")) : 0
+                  }
                 />
               </Form.Item>
             </Col>
@@ -1513,7 +1899,9 @@ const RoomDetailPage = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  parser={(value) =>
+                    value ? Number(value.replace(/\$\s?|(,*)/g, "")) : 0
+                  }
                 />
               </Form.Item>
             </Col>
@@ -1544,146 +1932,121 @@ const RoomDetailPage = () => {
 
       {/* Add Utility Modal */}
       <Modal
-        title="Thêm hóa đơn tiện ích"
+        title={
+          selectedInvoice
+            ? "Cập nhật hóa đơn tiện ích"
+            : "Thêm hóa đơn tiện ích"
+        }
         open={addUtilityModalVisible}
-        onCancel={() => setAddUtilityModalVisible(false)}
+        onCancel={() => {
+          setAddUtilityModalVisible(false);
+          setSelectedInvoice(null);
+        }}
         footer={[
-          <Button key="back" onClick={() => setAddUtilityModalVisible(false)}>
+          <Button
+            key="back"
+            onClick={() => {
+              setAddUtilityModalVisible(false);
+              setSelectedInvoice(null);
+            }}
+          >
             Hủy
           </Button>,
           <Button key="submit" type="primary" onClick={handleSaveUtility}>
-            Thêm hóa đơn
+            {selectedInvoice ? "Cập nhật" : "Thêm hóa đơn"}
           </Button>,
         ]}
         width={700}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" requiredMark="optional">
           <Form.Item
-            name="month"
-            label="Tháng"
-            rules={[{ required: true, message: "Vui lòng nhập tháng!" }]}
+            name="invoiceMonth"
+            label="Kỳ hóa đơn"
+            rules={[{ required: true, message: "Vui lòng chọn kỳ hóa đơn" }]}
           >
-            <Input placeholder="MM/YYYY" />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="electricity"
-                label="Chỉ số điện (kWh)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập chỉ số điện!" },
-                ]}
-              >
-                <InputNumber style={{ width: "100%" }} min={0} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="water"
-                label="Chỉ số nước (m³)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập chỉ số nước!" },
-                ]}
-              >
-                <InputNumber style={{ width: "100%" }} min={0} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="electricityCost"
-                label="Chi phí điện (VNĐ)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập chi phí điện!" },
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  step={10000}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="waterCost"
-                label="Chi phí nước (VNĐ)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập chi phí nước!" },
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  step={10000}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item
-            name="otherFees"
-            label="Phí khác (VNĐ)"
-            rules={[{ required: true, message: "Vui lòng nhập phí khác!" }]}
-          >
-            <InputNumber
+            <DatePicker
+              picker="month"
+              format={MONTH_FORMAT}
               style={{ width: "100%" }}
-              min={0}
-              step={10000}
-              formatter={(value) =>
-                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-              }
-              parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
             />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="dueDate"
-                label="Hạn thanh toán"
-                rules={[
-                  { required: true, message: "Vui lòng chọn hạn thanh toán!" },
-                ]}
+                name="electricity"
+                label="Số điện (kWh)"
+                rules={[{ required: true, message: "Vui lòng nhập số điện" }]}
               >
-                <Input type="date" />
+                <InputNumber
+                  min={0}
+                  placeholder="Nhập số điện"
+                  style={{ width: "100%" }}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                name="status"
-                label="Trạng thái"
+                name="water"
+                label="Số nước (m³)"
                 rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái!" },
+                  { required: true, message: "Vui lòng nhập số nước" },
+                  {
+                    validator: (_, value) => {
+                      if (value > 9999) {
+                        return Promise.reject(
+                          "Giá trị số nước quá lớn, tối đa 9,999 m³"
+                        );
+                      }
+                      return Promise.resolve();
+                    },
+                  },
                 ]}
               >
-                <Select>
-                  <Select.Option value="pending">Chưa thanh toán</Select.Option>
-                  <Select.Option value="paid">Đã thanh toán</Select.Option>
-                </Select>
+                <InputNumber
+                  min={0}
+                  max={9999}
+                  placeholder="Nhập số nước"
+                  style={{ width: "100%" }}
+                />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item
-            name="paidDate"
-            label="Ngày thanh toán"
-            dependencies={["status"]}
-            rules={[
-              ({ getFieldValue }) => ({
-                required: getFieldValue("status") === "paid",
-                message: "Vui lòng chọn ngày thanh toán!",
-              }),
-            ]}
-          >
-            <Input type="date" />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="serviceFee"
+                label="Phí dịch vụ (VNĐ)"
+                initialValue={100000}
+              >
+                <InputNumber
+                  min={0}
+                  placeholder="Nhập phí dịch vụ"
+                  style={{ width: "100%" }}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) =>
+                    value ? Number(value.replace(/\$\s?|(,*)/g, "")) : 0
+                  }
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="dueDate"
+                label="Ngày đến hạn"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày đến hạn" },
+                ]}
+              >
+                <DatePicker
+                  format={DATE_FORMAT}
+                  style={{ width: "100%" }}
+                  placeholder="Chọn ngày đến hạn"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>
