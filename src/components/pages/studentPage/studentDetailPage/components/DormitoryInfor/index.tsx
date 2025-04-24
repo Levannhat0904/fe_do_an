@@ -1,57 +1,98 @@
 import { Student } from "@/types/student";
-import { Card, Descriptions } from "antd";
+import { Card, Descriptions, Tag } from "antd";
 import dayjs from "dayjs";
 import React from "react";
+
+interface Dormitory {
+  id: number;
+  buildingId: number;
+  buildingName: string;
+  roomId: number;
+  roomNumber: string;
+  bedNumber: string;
+  semester: string;
+  schoolYear: string;
+  checkInDate: string;
+  checkOutDate: string;
+  contractId?: number;
+  monthlyFee: number;
+  depositAmount: number;
+  status: string;
+}
+
 type Iprops = {
   student: Student;
-  dormitory: any;
+  dormitory: Dormitory;
 };
+
 const DormitoryInfo = (props: Iprops) => {
   const { student, dormitory } = props;
+
+  const getStatusBadge = (status: string) => {
+    if (!status) return <Tag color="default">Không có thông tin</Tag>;
+
+    switch (status.toLowerCase()) {
+      case "active":
+        return <Tag color="success">Đang ở</Tag>;
+      case "inactive":
+        return <Tag color="error">Đã rời đi</Tag>;
+      case "pending":
+        return <Tag color="warning">Chờ duyệt</Tag>;
+      default:
+        return <Tag color="default">{status}</Tag>;
+    }
+  };
+
+  const getPaymentStatusBadge = (status: string) => {
+    if (!status) return <Tag color="default">Không có thông tin</Tag>;
+
+    switch (status.toLowerCase()) {
+      case "paid":
+        return <Tag color="success">Đã thanh toán</Tag>;
+      case "unpaid":
+        return <Tag color="error">Chưa thanh toán</Tag>;
+      case "partial":
+        return <Tag color="warning">Thanh toán một phần</Tag>;
+      default:
+        return <Tag color="default">{status}</Tag>;
+    }
+  };
+
+  if (!dormitory || Object.keys(dormitory).length === 0) {
+    return (
+      <Card title="Thông tin ký túc xá" className="shadow-sm">
+        <div className="text-center text-gray-500 py-4">
+          Sinh viên chưa đăng ký ở ký túc xá
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card title="Thông tin đăng ký" className="shadow-sm">
         <Descriptions bordered column={1}>
-          <Descriptions.Item label="Mã đăng ký">
-            123
-            {/* {dormitory.applicationId} */}
+          <Descriptions.Item label="Mã phòng">
+            {dormitory.roomId}
           </Descriptions.Item>
-          <Descriptions.Item label="Ngày đăng ký">
-            123
-            {/* {dayjs(dormitory.registrationDate).format("DD/MM/YYYY")} */}
-          </Descriptions.Item>
-          <Descriptions.Item label="Trạng thái">
-            123
-            {/* {getStatusBadge(dormitory.approvalStatus)} */}
-          </Descriptions.Item>
-          {dormitory.approvalStatus === "approved" && (
-            <>
-              <Descriptions.Item label="Người duyệt">
-                {dormitory.approvedBy || "Chưa có"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày duyệt">
-                {dormitory.approvalDate
-                  ? dayjs(dormitory.approvalDate).format("DD/MM/YYYY")
-                  : "Chưa có"}
-              </Descriptions.Item>
-            </>
-          )}
-          {dormitory.approvalStatus === "rejected" && (
-            <Descriptions.Item label="Lý do từ chối">
-              {dormitory.rejectionReason || "Không có lý do"}
-            </Descriptions.Item>
-          )}
           <Descriptions.Item label="Học kỳ">
             {`Học kỳ ${dormitory.semester}, năm học ${dormitory.schoolYear}`}
           </Descriptions.Item>
+          <Descriptions.Item label="Trạng thái">
+            {getStatusBadge(dormitory.status)}
+          </Descriptions.Item>
+          {dormitory.contractId && (
+            <Descriptions.Item label="Mã hợp đồng">
+              {dormitory.contractId}
+            </Descriptions.Item>
+          )}
         </Descriptions>
       </Card>
 
       <Card title="Thông tin phòng ở" className="shadow-sm">
         <Descriptions bordered column={1}>
           <Descriptions.Item label="Tòa nhà">
-            ds
-            {/* {dormitory.buildingName} */}
+            {dormitory.buildingName}
           </Descriptions.Item>
           <Descriptions.Item label="Phòng">
             {dormitory.roomNumber}
@@ -60,16 +101,10 @@ const DormitoryInfo = (props: Iprops) => {
             {dormitory.bedNumber}
           </Descriptions.Item>
           <Descriptions.Item label="Phí hàng tháng">
-            21212
-            {/* {dormitory.monthlyFee.toLocaleString("vi-VN")} đồng */}
+            {dormitory.monthlyFee?.toLocaleString("vi-VN")} đồng
           </Descriptions.Item>
           <Descriptions.Item label="Tiền đặt cọc">
-            232
-            {/* {dormitory.depositAmount.toLocaleString("vi-VN")} đồng */}
-          </Descriptions.Item>
-          <Descriptions.Item label="Trạng thái thanh toán">
-            sdl
-            {/* {getPaymentStatusBadge(dormitory.paymentStatus)} */}
+            {dormitory.depositAmount?.toLocaleString("vi-VN")} đồng
           </Descriptions.Item>
           <Descriptions.Item label="Ngày check-in">
             {dormitory.checkInDate

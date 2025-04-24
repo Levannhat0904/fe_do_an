@@ -26,9 +26,11 @@ import {
   useGetStudentById,
   useActiveStudent,
   useRejectStudent,
+  useGetStudentDetailById,
+  useUpdateStudentDormitory,
 } from "@/api/student";
 import { StudentStatusEnum } from "@/constants/enums";
-import { Student, Dormitory, History, Roommate } from "@/types/student";
+import { Student } from "@/types/student";
 import StudentInfo from "./components/StudentInfo";
 import StudentStatus from "./components/StudentStatus";
 import Image from "next/image";
@@ -38,10 +40,16 @@ import DormitoryInfo from "./components/DormitoryInfor";
 import RoommateInfo from "./components/RoommateInfo";
 import dayjs from "dayjs";
 import HistoryTimeline from "./components/HistoryTimeline";
+
 const StudentDormitoryDetail = () => {
   const params = useParams();
   const id = parseInt(params.id as string);
-  const { data: student, isLoading, error, refetch } = useGetStudentById(id);
+  const {
+    data: studentDetailData,
+    isLoading,
+    error,
+    refetch,
+  } = useGetStudentDetailById(id);
   const [modal, contextHolder] = Modal.useModal();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("info");
@@ -49,6 +57,12 @@ const StudentDormitoryDetail = () => {
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [form] = Form.useForm();
+
+  const student = studentDetailData?.data?.student;
+  const dormitory = studentDetailData?.data?.dormitory;
+  const history = studentDetailData?.data?.history || [];
+  const roommates = studentDetailData?.data?.roommates || [];
+
   const {
     mutate: activeStudent,
     isPending: isActiveStudentLoading,
@@ -61,6 +75,11 @@ const StudentDormitoryDetail = () => {
     isSuccess: isRejectStudentSuccess,
     isError: isRejectStudentError,
   } = useRejectStudent(String(student?.id));
+
+  const {
+    mutate: updateStudentDormitory,
+    isPending: isUpdateDormitoryLoading,
+  } = useUpdateStudentDormitory();
 
   if (isLoading) {
     return (
@@ -92,51 +111,6 @@ const StudentDormitoryDetail = () => {
       </div>
     );
   }
-  const dormitory = {} as Dormitory;
-  const history = [
-    // fake data
-    {
-      id: 1,
-      description: "Đăng ký ký túc xá",
-      date: "2024-01-01",
-      user: "Nguyễn Văn A",
-    },
-    {
-      id: 2,
-      description: "Đăng ký ký túc xá",
-      date: "2024-01-01",
-      user: "Nguyễn Văn A",
-    },
-    {
-      id: 3,
-      description: "Đăng ký ký túc xá",
-      date: "2024-01-01",
-      user: "Nguyễn Văn A",
-    },
-  ];
-  const roommates = [
-    {
-      id: 1,
-      studentCode: "1234567890",
-      fullName: "Nguyễn Văn A",
-      gender: "male",
-      status: "pending",
-    },
-    {
-      id: 2,
-      studentCode: "1234567890",
-      fullName: "Nguyễn Văn A",
-      gender: "male",
-      status: "pending",
-    },
-    {
-      id: 3,
-      studentCode: "1234567890",
-      fullName: "Nguyễn Văn A",
-      gender: "male",
-      status: "pending",
-    },
-  ];
 
   const handleActiveStudent = () => {
     setShowActiveStudentModal(true);
@@ -204,24 +178,53 @@ const StudentDormitoryDetail = () => {
   };
 
   const handleEdit = () => {
-    form.setFieldsValue({
-      buildingName: dormitory.buildingName,
-      roomNumber: dormitory.roomNumber,
-      bedNumber: dormitory.bedNumber,
-      semester: dormitory.semester,
-      schoolYear: dormitory.schoolYear,
-    });
+    if (dormitory) {
+      form.setFieldsValue({
+        buildingId: dormitory.buildingId,
+        roomId: dormitory.roomId,
+        bedNumber: dormitory.bedNumber?.replace("Bed-", ""),
+        semester: dormitory.semester,
+        schoolYear: dormitory.schoolYear,
+        monthlyFee: dormitory.monthlyFee,
+        depositAmount: dormitory.depositAmount,
+      });
+    }
+
     Modal.confirm({
       title: "Chỉnh sửa thông tin phòng ở",
       width: 600,
       content: <FormEditRoom form={form} student={student!} />,
-      onOk: () => {
-        const values = form.getFieldsValue();
-        // Gọi API cập nhật thông tin
-        notification.success({
-          message: "Cập nhật thành công",
-          description: "Đã cập nhật thông tin phòng ở của sinh viên",
-        });
+      onOk: async () => {
+        try {
+          const values = await form.validateFields();
+
+          // Ensure we have at least the required fields
+          if (!values.roomId || !values.monthlyFee || !values.depositAmount) {
+            notification.error({
+              message: "Thiếu thông tin",
+              description:
+                "Vui lòng cung cấp đầy đủ thông tin phòng và chi phí",
+            });
+            return false;
+          }
+
+          updateStudentDormitory(
+            {
+              id: student!.id!,
+              data: values,
+            },
+            {
+              onSuccess: () => {
+                refetch();
+              },
+            }
+          );
+
+          return true;
+        } catch (error) {
+          console.error("Form validation failed:", error);
+          return false;
+        }
       },
     });
   };
@@ -317,7 +320,11 @@ const StudentDormitoryDetail = () => {
               handleEdit={handleEdit}
               handlePrint={handlePrint}
               handleBack={handleBack}
-              loading={isActiveStudentLoading || isRejectStudentLoading}
+              loading={
+                isActiveStudentLoading ||
+                isRejectStudentLoading ||
+                isUpdateDormitoryLoading
+              }
             />
           </div>
         </div>
@@ -337,7 +344,7 @@ const StudentDormitoryDetail = () => {
               icon: <HomeOutlined />,
               label: "Thông tin ký túc xá",
               children: (
-                <DormitoryInfo student={student!} dormitory={dormitory} />
+                <DormitoryInfo student={student!} dormitory={dormitory!} />
               ),
             },
             {
@@ -345,7 +352,7 @@ const StudentDormitoryDetail = () => {
               label: "Bạn cùng phòng",
               icon: <UserOutlined />,
               children: (
-                <RoommateInfo dormitory={dormitory} roommates={roommates} />
+                <RoommateInfo dormitory={dormitory!} roommates={roommates} />
               ),
             },
             {
@@ -358,7 +365,7 @@ const StudentDormitoryDetail = () => {
         />
       </Card>
 
-      {/* {contextHolder} */}
+      {contextHolder}
     </div>
   );
 };

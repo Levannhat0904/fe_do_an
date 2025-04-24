@@ -48,6 +48,45 @@ interface StudentDetailResponse {
   data: Student;
 }
 
+interface StudentDetailDataResponse {
+  success: boolean;
+  message: string;
+  data: {
+    student: Student;
+    dormitory: {
+      id: number;
+      buildingId: number;
+      buildingName: string;
+      roomId: number;
+      roomNumber: string;
+      bedNumber: string;
+      semester: string;
+      schoolYear: string;
+      checkInDate: string;
+      checkOutDate: string;
+      contractId?: number;
+      monthlyFee: number;
+      depositAmount: number;
+      status: string;
+    };
+    history: {
+      id: number;
+      date: string;
+      action: string;
+      description: string;
+      user: string;
+    }[];
+    roommates: {
+      id: number;
+      studentCode: string;
+      fullName: string;
+      gender: string;
+      status: string;
+      avatarPath?: string;
+    }[];
+  };
+}
+
 interface UpdateStatusResponse {
   success: boolean;
   message: string;
@@ -107,8 +146,18 @@ const studentApi = {
     return response?.data?.data;
   },
 
+  getStudentDetailById: async (id: number): Promise<StudentDetailDataResponse> => {
+    const response = await axiosClient.get(`${API_URL}/student/${id}/detail`);
+    return response.data;
+  },
+
   updateStudentStatus: async (id: number, status: StudentStatusEnum): Promise<UpdateStatusResponse> => {
     const response = await axiosClient.put(`${API_URL}/student/${id}/status`, { status });
+    return response.data;
+  },
+
+  updateStudentDormitory: async (id: number, dormitoryData: any): Promise<{ success: boolean; message: string }> => {
+    const response = await axiosClient.put(`${API_URL}/student/${id}/dormitory`, dormitoryData);
     return response.data;
   },
 };
@@ -153,6 +202,14 @@ export const useGetStudentById = (id: number) => {
   });
 };
 
+export const useGetStudentDetailById = (id: number) => {
+  return useQuery({
+    queryKey: ['studentDetail', id],
+    queryFn: () => studentApi.getStudentDetailById(id),
+    enabled: !!id,
+  });
+};
+
 export const useUpdateStudentStatus = () => {
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: StudentStatusEnum }) =>
@@ -164,6 +221,21 @@ export const useUpdateStudentStatus = () => {
     },
     onError: (error) => {
       message.error('Cập nhật trạng thái thất bại. Vui lòng thử lại');
+    },
+  });
+};
+
+export const useUpdateStudentDormitory = () => {
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      studentApi.updateStudentDormitory(id, data),
+    onSuccess: (response) => {
+      if (response.success) {
+        message.success('Cập nhật thông tin phòng ở thành công');
+      }
+    },
+    onError: (error) => {
+      message.error('Cập nhật thông tin phòng ở thất bại. Vui lòng thử lại');
     },
   });
 };

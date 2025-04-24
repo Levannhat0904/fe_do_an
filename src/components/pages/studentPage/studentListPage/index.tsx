@@ -15,6 +15,8 @@ import { FACULTY_OPTIONS, MAJOR_OPTIONS } from "@/constants/values";
 import debounce from "lodash/debounce";
 import { useRouter } from "next/navigation";
 import { useGetStudents } from "@/api/student";
+import { StudentStatusEnum } from "@/constants/enums";
+
 interface StudentData {
   id: number;
   studentCode: string;
@@ -199,14 +201,25 @@ const StudentPage = () => {
       width: 120,
       filters: [
         { text: "Chờ duyệt", value: "pending" },
-        { text: "Đã duyệt", value: "approved" },
+        { text: "Đã duyệt", value: "active" },
+        { text: "Đã từ chối", value: "inactive" },
+        { text: "Đã khóa", value: "blocked" },
       ],
       onFilter: (value: boolean | React.Key, record) => record.status === value,
-      render: (status: string) => (
-        <Tag color={status === "pending" ? "orange" : "green"}>
-          {status === "pending" ? "Chờ duyệt" : "Đã duyệt"}
-        </Tag>
-      ),
+      render: (status: string) => {
+        switch (status) {
+          case "active":
+            return <Tag color="green">Đã duyệt</Tag>;
+          case "pending":
+            return <Tag color="orange">Chờ duyệt</Tag>;
+          case "inactive":
+            return <Tag color="red">Đã từ chối</Tag>;
+          case "blocked":
+            return <Tag color="black">Đã khóa</Tag>;
+          default:
+            return <Tag color="default">{status}</Tag>;
+        }
+      },
     },
     {
       title: "Thao tác",

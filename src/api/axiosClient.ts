@@ -7,7 +7,7 @@ import { setAuthCookies } from '@/utils';
 
 
 const axiosClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${getCookie(KTX_ADMIN_ACCESS_TOKEN)}`,
@@ -16,7 +16,7 @@ const axiosClient = axios.create({
 });
 
 export const publicAxios = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   headers: {
     'Accept': 'application/json',
   },
