@@ -51,7 +51,7 @@ import {
   FileTextOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import roomApi, { RoomDetail } from "@/api/room";
+import roomApi, { RoomDetail, TimelineItem } from "@/api/room";
 import invoiceApi from "@/api/invoice";
 import { DATE_FORMAT, DATE_FORMAT_API, MONTH_FORMAT } from "../../billPage";
 
@@ -65,6 +65,8 @@ const RoomDetailPage = () => {
   const [data, setData] = useState<RoomDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<any>(null);
+  const [timelineData, setTimelineData] = useState<TimelineItem[]>([]);
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState("info");
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -100,6 +102,32 @@ const RoomDetailPage = () => {
       fetchRoomDetail();
     }
   }, [roomId]);
+
+  useEffect(() => {
+    // When switching to timeline tab, fetch timeline data
+    if (activeTab === "timeline") {
+      refreshTimelineData();
+    }
+  }, [activeTab]);
+
+  // Function to refresh timeline data
+  const refreshTimelineData = async () => {
+    if (!roomId) return;
+
+    try {
+      setIsTimelineLoading(true);
+      const timelineItems = await roomApi.getRoomTimeline(roomId);
+      setTimelineData(timelineItems);
+    } catch (error) {
+      console.error("Error fetching timeline data:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể tải lịch sử hoạt động của phòng",
+      });
+    } finally {
+      setIsTimelineLoading(false);
+    }
+  };
 
   // Handle edit room
   const handleEditRoom = () => {
@@ -187,6 +215,12 @@ const RoomDetailPage = () => {
         const updatedData = await roomApi.getRoomDetail(roomId);
         setData(updatedData);
 
+        // Refresh timeline data if we're on the timeline tab
+        if (activeTab === "timeline") {
+          const timelineItems = await roomApi.getRoomTimeline(roomId);
+          setTimelineData(timelineItems);
+        }
+
         setEditModalVisible(false);
       } catch (apiError) {
         console.error("API error:", apiError);
@@ -264,6 +298,12 @@ const RoomDetailPage = () => {
       const updatedData = await roomApi.getRoomDetail(roomId);
       setData(updatedData);
 
+      // Refresh timeline data if we're on the timeline tab
+      if (activeTab === "timeline") {
+        const timelineItems = await roomApi.getRoomTimeline(roomId);
+        setTimelineData(timelineItems);
+      }
+
       setAddMaintenanceModalVisible(false);
     } catch (error) {
       console.error("Error adding maintenance:", error);
@@ -301,6 +341,12 @@ const RoomDetailPage = () => {
       // Refresh dữ liệu
       const updatedData = await roomApi.getRoomDetail(roomId);
       setData(updatedData);
+
+      // Refresh timeline data if we're on the timeline tab
+      if (activeTab === "timeline") {
+        const timelineItems = await roomApi.getRoomTimeline(roomId);
+        setTimelineData(timelineItems);
+      }
     } catch (error: any) {
       notification.error({
         message: "Cập nhật thất bại",
@@ -427,6 +473,12 @@ const RoomDetailPage = () => {
         const updatedData = await roomApi.getRoomDetail(roomId);
         setData(updatedData);
 
+        // Refresh timeline data if we're on the timeline tab
+        if (activeTab === "timeline") {
+          const timelineItems = await roomApi.getRoomTimeline(roomId);
+          setTimelineData(timelineItems);
+        }
+
         setAddUtilityModalVisible(false);
         setSelectedInvoice(null);
       } else {
@@ -475,6 +527,12 @@ const RoomDetailPage = () => {
           // Refresh dữ liệu
           const updatedData = await roomApi.getRoomDetail(roomId);
           setData(updatedData);
+
+          // Refresh timeline data if we're on the timeline tab
+          if (activeTab === "timeline") {
+            const timelineItems = await roomApi.getRoomTimeline(roomId);
+            setTimelineData(timelineItems);
+          }
         } catch (error) {
           console.error("Error removing resident:", error);
           notification.error({
@@ -524,6 +582,12 @@ const RoomDetailPage = () => {
           // Refresh data
           const updatedData = await roomApi.getRoomDetail(roomId);
           setData(updatedData);
+
+          // Refresh timeline data if we're on the timeline tab
+          if (activeTab === "timeline") {
+            const timelineItems = await roomApi.getRoomTimeline(roomId);
+            setTimelineData(timelineItems);
+          }
         } catch (error) {
           console.error("Error processing request:", error);
           notification.error({
@@ -573,8 +637,34 @@ const RoomDetailPage = () => {
         duration: 0,
       });
 
+      console.log("Updating room status:", {
+        roomId,
+        newStatus,
+        currentStatus: data?.room.status,
+      });
+
+      if (!roomId || isNaN(roomId)) {
+        notification.error({
+          key,
+          message: "Lỗi",
+          description: "ID phòng không hợp lệ",
+        });
+        return;
+      }
+
+      // Kiểm tra nếu phòng đang chuyển sang bảo trì và đang có sinh viên
+      if (newStatus === "maintenance" && residents && residents.length > 0) {
+        notification.error({
+          key,
+          message: "Lỗi",
+          description: "Không thể đánh dấu bảo trì khi phòng đang có sinh viên",
+        });
+        return;
+      }
+
       // Gọi API patch status room
-      await roomApi.updateRoomStatus(roomId, newStatus);
+      const response = await roomApi.updateRoomStatus(roomId, newStatus);
+      console.log("API response:", response);
 
       notification.success({
         key,
@@ -587,6 +677,12 @@ const RoomDetailPage = () => {
       // Refresh data
       const updatedData = await roomApi.getRoomDetail(roomId);
       setData(updatedData);
+
+      // Refresh timeline data if we're on the timeline tab
+      if (activeTab === "timeline") {
+        const timelineItems = await roomApi.getRoomTimeline(roomId);
+        setTimelineData(timelineItems);
+      }
     } catch (error) {
       console.error("Error updating room status:", error);
       notification.error({
@@ -879,6 +975,23 @@ const RoomDetailPage = () => {
       </body>
       </html>
     `;
+  };
+
+  // Get color for timeline item based on action type
+  const getTimelineItemColor = (action: string): string => {
+    const colorMap: Record<string, string> = {
+      create: "green",
+      update: "blue",
+      delete: "red",
+      status_change: "orange",
+      remove: "red",
+    };
+    return colorMap[action] || "blue";
+  };
+
+  // Format timestamp for timeline
+  const formatTimestamp = (timestamp: string): string => {
+    return dayjs(timestamp).format("DD/MM/YYYY HH:mm:ss");
   };
 
   if (isLoading) {
@@ -1387,7 +1500,12 @@ const RoomDetailPage = () => {
                           </Descriptions.Item>
                           <Descriptions.Item label="Tiện nghi" span={2}>
                             {room.amenities && room.amenities.length > 0
-                              ? room.amenities.map((item, index) => (
+                              ? (Array.isArray(room.amenities)
+                                  ? room.amenities
+                                  : typeof room.amenities === "string"
+                                  ? JSON.parse(room.amenities)
+                                  : []
+                                ).map((item: string, index: number) => (
                                   <Tag key={index} color="blue">
                                     {item}
                                   </Tag>
@@ -1587,6 +1705,74 @@ const RoomDetailPage = () => {
                 </Card>
               ),
             },
+            {
+              key: "timeline",
+              label: (
+                <span>
+                  <HistoryOutlined /> Lịch sử hoạt động
+                </span>
+              ),
+              children: (
+                <Card title="Lịch sử hoạt động của phòng" bordered={false}>
+                  {isTimelineLoading ? (
+                    <div style={{ textAlign: "center", padding: "40px 0" }}>
+                      <Spin />
+                      <div style={{ marginTop: "8px" }}>
+                        Đang tải dữ liệu...
+                      </div>
+                    </div>
+                  ) : timelineData.length > 0 ? (
+                    <Timeline mode="left">
+                      {timelineData.map((item) => (
+                        <Timeline.Item
+                          key={item.id}
+                          color={getTimelineItemColor(item.action)}
+                          label={formatTimestamp(item.timestamp)}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                            }}
+                          >
+                            {item.userAvatar ? (
+                              <Avatar
+                                src={item.userAvatar}
+                                style={{ marginRight: 8 }}
+                              />
+                            ) : (
+                              <Avatar style={{ marginRight: 8 }}>
+                                {item.userName
+                                  ? item.userName.charAt(0).toUpperCase()
+                                  : "U"}
+                              </Avatar>
+                            )}
+                            <div>
+                              <div>
+                                <strong>{item.userName}</strong>
+                                <Tag
+                                  color={
+                                    item.userType === "admin" ? "red" : "blue"
+                                  }
+                                  style={{ marginLeft: 8 }}
+                                >
+                                  {item.userType === "admin"
+                                    ? "Quản trị viên"
+                                    : "Sinh viên"}
+                                </Tag>
+                              </div>
+                              <div>{item.description}</div>
+                            </div>
+                          </div>
+                        </Timeline.Item>
+                      ))}
+                    </Timeline>
+                  ) : (
+                    <Empty description="Không có dữ liệu lịch sử hoạt động nào" />
+                  )}
+                </Card>
+              ),
+            },
           ]}
         />
       </Card>
@@ -1668,9 +1854,11 @@ const RoomDetailPage = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
-                  parser={(value) =>
-                    value ? Number(value.replace(/\$\s?|(,*)/g, "")) : 0
-                  }
+                  parser={(value: string | undefined): number => {
+                    if (!value) return 0;
+                    const parsedValue = value.replace(/\$\s?|(,*)/g, "");
+                    return Number(parsedValue);
+                  }}
                 />
               </Form.Item>
             </Col>
@@ -1899,9 +2087,11 @@ const RoomDetailPage = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
-                  parser={(value) =>
-                    value ? Number(value.replace(/\$\s?|(,*)/g, "")) : 0
-                  }
+                  parser={(value: string | undefined): number => {
+                    if (!value) return 0;
+                    const parsedValue = value.replace(/\$\s?|(,*)/g, "");
+                    return Number(parsedValue);
+                  }}
                 />
               </Form.Item>
             </Col>
@@ -2025,9 +2215,11 @@ const RoomDetailPage = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
-                  parser={(value) =>
-                    value ? Number(value.replace(/\$\s?|(,*)/g, "")) : 0
-                  }
+                  parser={(value: string | undefined): number => {
+                    if (!value) return 0;
+                    const parsedValue = value.replace(/\$\s?|(,*)/g, "");
+                    return Number(parsedValue);
+                  }}
                 />
               </Form.Item>
             </Col>

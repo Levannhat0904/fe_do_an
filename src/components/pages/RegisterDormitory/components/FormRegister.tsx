@@ -33,6 +33,7 @@ import {
 } from "@/api/administrative";
 import { useGetDistricts, useGetWards } from "@/api/administrative";
 import { FACULTY_OPTIONS, MAJOR_OPTIONS } from "@/constants/values";
+import { KInput } from "@/components/atoms";
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -150,7 +151,7 @@ const StudentForm = () => {
                   { required: true, message: "Vui lòng nhập mã số sinh viên!" },
                 ]}
               >
-                <Input
+                <KInput
                   prefix={<UserOutlined className="text-gray-400" />}
                   placeholder="Nhập MSSV"
                 />
@@ -163,7 +164,7 @@ const StudentForm = () => {
                 name="fullName"
                 rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
               >
-                <Input placeholder="Nhập họ tên đầy đủ" />
+                <KInput placeholder="Nhập họ tên đầy đủ" />
               </Form.Item>
             </Col>
 
@@ -192,7 +193,7 @@ const StudentForm = () => {
                 ]}
               >
                 <DatePicker
-                  className="w-full"
+                  className="!rounded-lg !sbody-code !h-12 w-full"
                   format="DD/MM/YYYY"
                   disabledDate={(current) =>
                     current && current > dayjs().endOf("day")
@@ -220,7 +221,7 @@ const StudentForm = () => {
                   },
                 ]}
               >
-                <Input
+                <KInput
                   prefix={<PhoneOutlined className="text-gray-400" />}
                   placeholder="Nhập số điện thoại"
                 />
@@ -236,7 +237,7 @@ const StudentForm = () => {
                   { type: "email", message: "Email không hợp lệ!" },
                 ]}
               >
-                <Input
+                <KInput
                   prefix={<MailOutlined className="text-gray-400" />}
                   placeholder="Nhập email cá nhân"
                 />
@@ -259,6 +260,7 @@ const StudentForm = () => {
                 ]}
               >
                 <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
                   showSearch
                   placeholder="Chọn tỉnh/thành phố"
                   onChange={handleProvinceChange}
@@ -283,6 +285,7 @@ const StudentForm = () => {
                 ]}
               >
                 <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
                   showSearch
                   placeholder="Chọn quận/huyện"
                   disabled={!selectedProvince}
@@ -308,6 +311,7 @@ const StudentForm = () => {
                 ]}
               >
                 <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
                   showSearch
                   placeholder="Chọn phường/xã"
                   disabled={!selectedDistrict}
@@ -334,7 +338,7 @@ const StudentForm = () => {
                   },
                 ]}
               >
-                <Input
+                <KInput
                   suffix={<HomeOutlined className="text-gray-400" />}
                   placeholder="Số nhà, tên đường..."
                 />
@@ -355,6 +359,7 @@ const StudentForm = () => {
                 rules={[{ required: true, message: "Vui lòng chọn khoa!" }]}
               >
                 <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
                   showSearch
                   placeholder="Chọn khoa"
                   onChange={handleFacultyChange}
@@ -379,6 +384,7 @@ const StudentForm = () => {
                 ]}
               >
                 <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
                   showSearch
                   placeholder="Chọn chuyên ngành"
                   disabled={!selectedFaculty}
@@ -401,7 +407,7 @@ const StudentForm = () => {
                 name="className"
                 rules={[{ required: true, message: "Vui lòng nhập lớp!" }]}
               >
-                <Input placeholder="Nhập tên lớp" />
+                <KInput placeholder="Nhập tên lớp" />
               </Form.Item>
             </Col>
           </Row>
@@ -425,7 +431,12 @@ const StudentForm = () => {
               maxCount={1}
               accept="image/*"
             >
-              <Button icon={<UploadOutlined />}>Tải lên ảnh</Button>
+              <Button
+                icon={<UploadOutlined />}
+                className="!rounded-lg !sbody-code !h-12"
+              >
+                Tải lên ảnh
+              </Button>
             </Upload>
           </Form.Item>
 

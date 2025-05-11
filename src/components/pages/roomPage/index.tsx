@@ -50,6 +50,8 @@ import {
   faTshirt,
   faBed,
 } from "@fortawesome/free-solid-svg-icons";
+import { StatusEnum } from "@/constants";
+import { ColumnType } from "antd/es/table";
 
 const { Option } = Select;
 
@@ -89,8 +91,8 @@ const DormitoryRoomManagement = () => {
           : typeFilter === "nữ"
           ? "female"
           : undefined,
-      status: statusFilter,
-      availability: availabilityFilter,
+      status: statusFilter as "active" | "maintenance" | undefined,
+      availability: availabilityFilter as "available" | "full" | undefined,
       page,
       limit,
     });
@@ -170,11 +172,11 @@ const DormitoryRoomManagement = () => {
     []
   );
 
-  const handleSearch = (value) => {
+  const handleSearch = (value: string) => {
     debouncedSearch(value);
   };
 
-  const handleViewDetail = (id) => {
+  const handleViewDetail = (id: number) => {
     router.push(`/quan-ly-ky-tuc-xa/phong/${id}`);
   };
 
@@ -200,7 +202,11 @@ const DormitoryRoomManagement = () => {
       );
 
       if (values.amenities && values.amenities.length > 0) {
-        formData.append("amenities", JSON.stringify(values.amenities));
+        // Đảm bảo amenities luôn là mảng trước khi chuyển thành JSON
+        const amenitiesArray = Array.isArray(values.amenities)
+          ? values.amenities
+          : [values.amenities];
+        formData.append("amenities", JSON.stringify(amenitiesArray));
       }
 
       await roomApi.addRoom(formData);
@@ -225,26 +231,60 @@ const DormitoryRoomManagement = () => {
   const handleEditRoom = async () => {
     try {
       const values = await editForm.validateFields();
+      console.log("Form values:", values);
 
       // Create FormData for API call
       const formData = new FormData();
-      formData.append("buildingId", values.buildingId);
+
+      // Convert buildingId to number
+      const buildingId = Number(values.buildingId);
+      formData.append("buildingId", buildingId.toString());
+
       formData.append("roomNumber", values.roomNumber);
-      formData.append("floorNumber", values.floorNumber);
+      formData.append("floorNumber", values.floorNumber.toString());
       formData.append("roomType", values.type === "nam" ? "male" : "female");
-      formData.append("capacity", values.capacity);
-      formData.append("pricePerMonth", values.monthlyFee);
+
+      // Convert capacity to number
+      const capacity = Number(values.capacity);
+      formData.append("capacity", capacity.toString());
+
+      // Convert monthlyFee to number and use correct field name
+      const pricePerMonth = Number(values.monthlyFee);
+      formData.append("pricePerMonth", pricePerMonth.toString());
+
       formData.append(
         "status",
         values.status === "active" ? "available" : "maintenance"
       );
 
       if (values.amenities && values.amenities.length > 0) {
-        formData.append("amenities", JSON.stringify(values.amenities));
+        // Đảm bảo amenities luôn là mảng trước khi chuyển thành JSON
+        const amenitiesArray = Array.isArray(values.amenities)
+          ? values.amenities
+          : [values.amenities];
+        formData.append("amenities", JSON.stringify(amenitiesArray));
       }
 
       if (selectedRoom) {
-        await roomApi.updateRoom(selectedRoom.id, formData);
+        // Đảm bảo roomId là số
+        const roomId = Number(selectedRoom.id);
+        console.log("Updating room with ID:", roomId);
+        console.log("FormData contents:");
+        // Sử dụng Array.from để tránh lỗi iterating FormDataIterator
+        Array.from(formData.entries()).forEach((pair) => {
+          console.log(pair[0] + ": " + pair[1]);
+        });
+
+        // Kiểm tra xem roomId có phải là số hợp lệ không
+        if (isNaN(roomId)) {
+          notification.error({
+            message: "Lỗi",
+            description: "ID phòng không hợp lệ",
+          });
+          return;
+        }
+
+        await roomApi.updateRoom(roomId, formData);
 
         notification.success({
           message: "Cập nhật phòng thành công",
@@ -266,6 +306,21 @@ const DormitoryRoomManagement = () => {
   // Effect để cập nhật form khi selectedRoom thay đổi
   useEffect(() => {
     if (selectedRoom && editRoomModalVisible) {
+      // Xử lý amenities đúng cách
+      let amenitiesData = [];
+      if (selectedRoom.amenities) {
+        if (typeof selectedRoom.amenities === "string") {
+          try {
+            amenitiesData = JSON.parse(selectedRoom.amenities);
+          } catch (e) {
+            console.error("Lỗi parse amenities trong useEffect:", e);
+            amenitiesData = [];
+          }
+        } else if (Array.isArray(selectedRoom.amenities)) {
+          amenitiesData = selectedRoom.amenities;
+        }
+      }
+
       editForm.setFieldsValue({
         buildingId: selectedRoom.buildingId,
         roomNumber: selectedRoom.roomNumber,
@@ -273,7 +328,7 @@ const DormitoryRoomManagement = () => {
         type: selectedRoom.roomType === "male" ? "nam" : "nữ",
         capacity: selectedRoom.capacity,
         monthlyFee: selectedRoom.pricePerMonth,
-        amenities: selectedRoom.amenities,
+        amenities: amenitiesData,
         status:
           selectedRoom.status === "available" ||
           selectedRoom.status === "active"
@@ -298,28 +353,29 @@ const DormitoryRoomManagement = () => {
       dataIndex: "buildingName",
       key: "buildingName",
       width: 120,
-      sorter: (a, b) => a.buildingName.localeCompare(b.buildingName),
+      sorter: (a: Room, b: Room) =>
+        a.buildingName.localeCompare(b.buildingName),
     },
     {
       title: "Phòng",
       dataIndex: "roomNumber",
       key: "roomNumber",
       width: 100,
-      sorter: (a, b) => a.roomNumber.localeCompare(b.roomNumber),
+      sorter: (a: Room, b: Room) => a.roomNumber.localeCompare(b.roomNumber),
     },
     {
       title: "Tầng",
       dataIndex: "floorNumber",
       key: "floorNumber",
       width: 80,
-      sorter: (a, b) => a.floorNumber - b.floorNumber,
+      sorter: (a: Room, b: Room) => a.floorNumber - b.floorNumber,
     },
     {
       title: "Loại phòng",
       dataIndex: "roomType",
       key: "roomType",
       width: 100,
-      render: (type) => (
+      render: (type: string) => (
         <Tag color={type === "male" ? "blue" : "pink"}>
           {type === "male" ? "Nam" : "Nữ"}
         </Tag>
@@ -329,7 +385,7 @@ const DormitoryRoomManagement = () => {
       title: "Sức chứa",
       key: "capacity",
       width: 150,
-      render: (_, record) => (
+      render: (_: any, record: Room) => (
         <Tooltip
           title={`${record.occupiedBeds}/${record.capacity} chỗ đã sử dụng`}
         >
@@ -348,25 +404,22 @@ const DormitoryRoomManagement = () => {
       dataIndex: "amenities",
       key: "amenities",
       width: 200,
-      render: (amenities) => {
+      render: (amenities: string | any[]) => {
         let amenitiesArray = [];
-
-        try {
-          // Nếu amenities là chuỗi JSON, parse nó thành mảng
-          if (typeof amenities === "string") {
+        if (typeof amenities === "string") {
+          try {
             amenitiesArray = JSON.parse(amenities);
+          } catch (e) {
+            console.error("Lỗi parse amenities:", e);
+            amenitiesArray = [];
           }
-          // Nếu amenities đã là mảng
-          else if (Array.isArray(amenities)) {
-            amenitiesArray = amenities;
-          }
-        } catch (error) {
-          console.error("Lỗi khi xử lý amenities:", error);
+        } else if (Array.isArray(amenities)) {
+          amenitiesArray = amenities;
         }
 
         return (
           <span>
-            {amenitiesArray.map((item) => (
+            {amenitiesArray.map((item: string) => (
               <Tag key={item}>{item}</Tag>
             ))}
           </span>
@@ -378,16 +431,17 @@ const DormitoryRoomManagement = () => {
       dataIndex: "pricePerMonth",
       key: "pricePerMonth",
       width: 120,
-      sorter: (a, b) => a.pricePerMonth - b.pricePerMonth,
-      render: (fee) => `${fee.toLocaleString("vi-VN")} đ`,
+      sorter: (a: Room, b: Room) => a.pricePerMonth - b.pricePerMonth,
+      render: (fee: number) => `${fee.toLocaleString("vi-VN")} đ`,
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       width: 120,
-      render: (status) => {
-        const isActive = status === "available" || status === "active";
+      render: (status: StatusEnum) => {
+        const isActive =
+          status === StatusEnum.Available || status === StatusEnum.Active;
         return (
           <Badge
             status={isActive ? "success" : "warning"}
@@ -401,7 +455,7 @@ const DormitoryRoomManagement = () => {
       key: "action",
       fixed: "right",
       width: 120,
-      render: (_, record) => (
+      render: (_: any, record: Room) => (
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
             <Button
@@ -576,7 +630,10 @@ const DormitoryRoomManagement = () => {
                     <Badge
                       count={
                         <span className="flex items-center bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
-                          {amenityIcons[item] || <CheckOutlined />} {item}
+                          {amenityIcons[item as keyof typeof amenityIcons] || (
+                            <CheckOutlined />
+                          )}
+                          {item}
                         </span>
                       }
                       style={{ backgroundColor: "transparent" }}
@@ -743,7 +800,7 @@ const DormitoryRoomManagement = () => {
 
         {viewMode === "table" ? (
           <Table
-            columns={columns}
+            columns={columns as ColumnType<Room>[]}
             dataSource={data?.data}
             loading={isLoading}
             rowKey="id"
@@ -878,13 +935,15 @@ const DormitoryRoomManagement = () => {
               >
                 <InputNumber
                   min={100000}
-                  max={2000000}
                   step={50000}
                   style={{ width: "100%" }}
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  parser={(value: string | undefined) => {
+                    const parsedValue = value?.replace(/\$\s?|(,*)/g, "");
+                    return parsedValue ? parseFloat(parsedValue) : 0;
+                  }}
                   placeholder="Nhập giá phòng"
                 />
               </Form.Item>
@@ -1008,7 +1067,10 @@ const DormitoryRoomManagement = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  parser={(value: string | undefined) => {
+                    const parsedValue = value?.replace(/\$\s?|(,*)/g, "");
+                    return parsedValue ? parseFloat(parsedValue) : 0;
+                  }}
                   placeholder="Nhập giá phòng"
                 />
               </Form.Item>

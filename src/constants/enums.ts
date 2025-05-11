@@ -57,6 +57,8 @@ export enum StatusEnum {
   Processing = "processing",
   Success = "success",
   Assigned = "assigned",
+  Available = "available",
+  Maintenance = "maintenance",
 }
 
 export enum DrawerEnum {

@@ -316,34 +316,62 @@ const ContractPage: React.FC = () => {
       const values = await form.validateFields();
       const [startDate, endDate] = values.dateRange;
 
-      console.log("Date values:", values.dateRange); // Log dates for debugging
+      console.log("Form values:", values); // Log all form values
 
       // Ensure dates are properly formatted as YYYY-MM-DD for the backend
       const formattedStartDate = startDate.format(DATE_FORMAT_API);
       const formattedEndDate = endDate.format(DATE_FORMAT_API);
 
-      console.log("Formatted dates:", formattedStartDate, formattedEndDate); // Log formatted dates
+      console.log("Formatted dates:", formattedStartDate, formattedEndDate);
 
-      const contractData = {
+      // Prepare contract data with all fields
+      interface ContractDataSubmit {
+        studentId: number;
+        roomId: number;
+        startDate: string;
+        endDate: string;
+        depositAmount: number;
+        monthlyFee: number;
+        status?: "active" | "expired" | "terminated";
+      }
+
+      const contractData: ContractDataSubmit = {
         studentId: values.studentId,
         roomId: values.roomId,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
-        depositAmount: values.depositAmount,
-        monthlyFee: values.monthlyFee,
-        status: values.status,
+        depositAmount: Number(values.depositAmount),
+        monthlyFee: Number(values.monthlyFee),
       };
+
+      // Only add status when editing, not for new contracts
+      if (editingContract) {
+        contractData.status = values.status;
+      }
+
+      console.log("Contract data to be sent:", contractData);
+      console.log(
+        "Editing contract:",
+        editingContract ? `ID: ${editingContract.id}` : "Creating new"
+      );
 
       if (editingContract) {
         // Update existing contract
-        await contractApi.updateContract(editingContract.id, contractData);
+        const response = await contractApi.updateContract(
+          editingContract.id,
+          contractData
+        );
+        console.log("Update response:", response);
+
         notification.success({
           message: "Thành công",
           description: "Cập nhật hợp đồng thành công",
         });
       } else {
         // Create new contract
-        await contractApi.createContract(contractData);
+        const response = await contractApi.createContract(contractData);
+        console.log("Create response:", response);
+
         notification.success({
           message: "Thành công",
           description: "Tạo hợp đồng thành công",

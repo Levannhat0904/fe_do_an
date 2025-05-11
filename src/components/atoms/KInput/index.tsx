@@ -66,7 +66,7 @@ export default function KInput(props: Props) {
         return (
           <Input
             className={cn(
-              "!rounded-full !sbody-code",
+              "!rounded-lg !sbody-code h-12",
               styles.container,
               className
             )}

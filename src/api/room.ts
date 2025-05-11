@@ -125,6 +125,18 @@ export interface RoomDetail {
   }[];
 }
 
+export interface TimelineItem {
+  id: number;
+  action: string;
+  entityType: string;
+  entityId: number;
+  description: string;
+  timestamp: string;
+  userName: string;
+  userType: string;
+  userAvatar?: string;
+}
+
 const roomApi = {
   getRooms: async (filters: RoomFilters = {}): Promise<RoomResponse> => {
     const config: AxiosRequestConfig = {
@@ -149,7 +161,7 @@ const roomApi = {
   },
 
   updateRoom: async (id: number, formData: FormData) => {
-    const response = await axiosClient.put(`${API_URL}/rooms/${id}`, formData, {
+    const response = await axiosClient.put(`${API_URL}/rooms/${id.toString()}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -165,6 +177,11 @@ const roomApi = {
   getRoomDetail: async (id: number): Promise<RoomDetail> => {
     const response = await axiosClient.get(`${API_URL}/rooms/${id}/detail`);
     return response.data;
+  },
+
+  getRoomTimeline: async (id: number): Promise<TimelineItem[]> => {
+    const response = await axiosClient.get(`${API_URL}/rooms/${id}/timeline`);
+    return response.data.data;
   },
 
   processMaintenanceRequest: async (requestId: number, status: string, notes?: string) => {
