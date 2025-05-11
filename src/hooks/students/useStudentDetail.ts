@@ -90,7 +90,6 @@ export const useStudentDetail = (id: number) => {
     };
 
     setTimeout(() => {
-      setData(mockData);
       setIsLoading(false);
     }, 1000);
   }, [id]);

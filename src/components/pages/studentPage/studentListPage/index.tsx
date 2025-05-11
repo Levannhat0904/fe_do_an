@@ -16,6 +16,7 @@ import debounce from "lodash/debounce";
 import { useRouter } from "next/navigation";
 import { useGetStudents } from "@/api/student";
 import { StudentStatusEnum } from "@/constants/enums";
+import { Student } from "@/types/student";
 
 interface StudentData {
   id: number;
@@ -265,7 +266,7 @@ const StudentPage = () => {
       )}
 
       <Table
-        columns={columns}
+        columns={columns as ColumnsType<Student>}
         dataSource={data?.data}
         loading={isLoading}
         rowKey="id"

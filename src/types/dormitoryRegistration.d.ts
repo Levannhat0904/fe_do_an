@@ -30,3 +30,5 @@ interface Roommate {
   gender: string;
   status: string;
 }
+
+interface DormitoryRegistration extends any { }
