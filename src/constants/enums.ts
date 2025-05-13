@@ -3,6 +3,15 @@ export enum Routers {
   login = "/dang-nhap",
   forgotPassword = "/quen-mat-khau",
 }
+export enum RoutersStudent {
+  home = "/sinh-vien",
+  login = "/dang-nhap",
+  forgotPassword = "/quen-mat-khau",
+}
+export enum UserType {
+  admin = "admin",
+  student = "student",
+}
 export enum InputType {
   text = "text",
   password = "password",

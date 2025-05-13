@@ -2,6 +2,7 @@
 
 import {
   Routers,
+  RoutersStudent,
   TFormLoginParams,
   TLoginResponseData,
   TProfileResponseData,
@@ -67,10 +68,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       },
       {
         onSuccess: (data) => {
+          console.log("data", data);
           if (data.success && data.data) {
             setAuthCookies(data.data);
-            router.push(Routers.home);
-            window.location.reload();
+            if (data.data?.user?.userType === "admin") {
+              router.push(Routers.home);
+              window.location.reload();
+            } else {
+              router.push(RoutersStudent.home);
+              window.location.reload();
+            }
+            // router.push(Routers.home);
+            // window.location.reload();
           }
         },
       }
