@@ -4,16 +4,17 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
   productionBrowserSourceMaps: true,
   images: {
-    remotePatterns: [
-      {
-        hostname: "localhost",
-        protocol: "http",
-        // protocol: "**",
-        port: "3000",
-        pathname: "/**",
-        unoptimized: true,
-      },
-    ],
+    // remotePatterns: [
+    //   {
+    //     hostname: "**",
+    //     // protocol: "http",
+    //     protocol: "**",
+    //     port: "**",
+    //     pathname: "/**",
+    //   },
+    // ],
+    domains: ["*"],
+    unoptimized: true,
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
