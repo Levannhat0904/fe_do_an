@@ -3,7 +3,7 @@ import { message } from 'antd';
 import axiosClient, { publicAxios } from './axiosClient';
 import axios from 'axios';
 import { StudentStatusEnum } from '@/constants/enums';
-import { Student } from '@/types/student';
+import { Student, MaintenanceRequest } from '@/types/student';
 const API_URL = 'http://localhost:3000/api';
 interface StudentRegistration {
   email: string;
@@ -98,6 +98,12 @@ interface GetStudentsParams {
   search?: string;
 }
 
+interface MaintenanceRequestsResponse {
+  success: boolean;
+  message: string;
+  data: MaintenanceRequest[];
+}
+
 const studentApi = {
   createRegistration: async (data: any): Promise<StudentRegistrationResponse> => {
     const formData = new FormData();
@@ -147,8 +153,27 @@ const studentApi = {
   },
 
   getStudentDetailById: async (id: number): Promise<StudentDetailDataResponse> => {
-    const response = await axiosClient.get(`${API_URL}/student/${id}/detail`);
-    return response.data;
+    try {
+      console.log(`Fetching student detail for ID: ${id}`);
+      const response = await axiosClient.get(`${API_URL}/student/${id}/detail`);
+      console.log('Student detail response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching student detail:', error);
+      throw error;
+    }
+  },
+
+  getCurrentStudentDetail: async (): Promise<StudentDetailDataResponse> => {
+    try {
+      console.log('Fetching current student detail');
+      const response = await axiosClient.get(`${API_URL}/student/current/detail`);
+      console.log('Current student detail response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching current student detail:', error);
+      throw error;
+    }
   },
 
   updateStudentStatus: async (id: number, status: StudentStatusEnum): Promise<UpdateStatusResponse> => {
@@ -159,6 +184,72 @@ const studentApi = {
   updateStudentDormitory: async (id: number, dormitoryData: any): Promise<{ success: boolean; message: string }> => {
     const response = await axiosClient.put(`${API_URL}/student/${id}/dormitory`, dormitoryData);
     return response.data;
+  },
+
+  updateStudentProfile: async (id: number, data: any): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await axiosClient.put(`${API_URL}/student/${id}/profile`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getRoomMaintenanceRequests: async (roomId: number): Promise<MaintenanceRequestsResponse> => {
+    try {
+      const response = await axiosClient.get(`${API_URL}/rooms/${roomId}/maintenance-requests`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching maintenance requests:', error);
+      throw error;
+    }
+  },
+
+  createMaintenanceRequest: async (data: any): Promise<{ success: boolean; message: string }> => {
+    try {
+      const formData = new FormData();
+
+      // Append all fields to FormData
+      Object.keys(data).forEach(key => {
+        if (key !== 'images') {
+          formData.append(key, data[key]);
+        }
+      });
+
+      // Handle image uploads
+      if (data.images && data.images.length > 0) {
+        data.images.forEach((file: any, index: number) => {
+          if (file.originFileObj) {
+            formData.append('images', file.originFileObj);
+          }
+        });
+      }
+
+      const response = await axiosClient.post(`${API_URL}/rooms/maintenance-requests`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error creating maintenance request:', error);
+      throw error;
+    }
+  },
+
+  cancelMaintenanceRequest: async (requestId: number): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await axiosClient.delete(`${API_URL}/rooms/maintenance-requests/${requestId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error canceling maintenance request:', error);
+      throw error;
+    }
   },
 };
 export const useActiveStudent = (studentId: string) => {
@@ -210,6 +301,13 @@ export const useGetStudentDetailById = (id: number) => {
   });
 };
 
+export const useGetCurrentStudentDetail = () => {
+  return useQuery({
+    queryKey: ['currentStudentDetail'],
+    queryFn: () => studentApi.getCurrentStudentDetail(),
+  });
+};
+
 export const useUpdateStudentStatus = () => {
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: StudentStatusEnum }) =>
@@ -236,6 +334,57 @@ export const useUpdateStudentDormitory = () => {
     },
     onError: (error) => {
       message.error('Cập nhật thông tin phòng ở thất bại. Vui lòng thử lại');
+    },
+  });
+};
+
+export const useUpdateStudentProfile = () => {
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      studentApi.updateStudentProfile(id, data),
+    onSuccess: (response) => {
+      if (response.success) {
+        message.success('Cập nhật thông tin cá nhân thành công');
+      }
+    },
+    onError: (error) => {
+      message.error('Cập nhật thông tin cá nhân thất bại. Vui lòng thử lại');
+    },
+  });
+};
+
+export const useGetRoomMaintenanceRequests = (roomId: number) => {
+  return useQuery({
+    queryKey: ['maintenanceRequests', roomId],
+    queryFn: () => studentApi.getRoomMaintenanceRequests(roomId),
+    enabled: !!roomId,
+  });
+};
+
+export const useCreateMaintenanceRequest = () => {
+  return useMutation({
+    mutationFn: studentApi.createMaintenanceRequest,
+    onSuccess: (response) => {
+      if (response.success) {
+        message.success('Yêu cầu bảo trì đã được gửi thành công');
+      }
+    },
+    onError: (error) => {
+      message.error('Gửi yêu cầu bảo trì thất bại. Vui lòng thử lại');
+    },
+  });
+};
+
+export const useCancelMaintenanceRequest = () => {
+  return useMutation({
+    mutationFn: (requestId: number) => studentApi.cancelMaintenanceRequest(requestId),
+    onSuccess: (response) => {
+      if (response.success) {
+        message.success('Đã hủy yêu cầu bảo trì');
+      }
+    },
+    onError: (error) => {
+      message.error('Không thể hủy yêu cầu. Vui lòng thử lại sau');
     },
   });
 };

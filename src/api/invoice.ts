@@ -1,4 +1,6 @@
 import axiosClient from './axiosClient';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { message } from 'antd';
 
 // We need to match the exact API URL structure in the backend
 const API_URL = '/api';
@@ -204,7 +206,69 @@ const invoiceApi = {
         data: []
       };
     }
-  }
+  },
+
+  // Get invoices by student
+  getInvoicesByStudent: async (studentId: number): Promise<InvoiceResponse> => {
+    try {
+      const response = await axiosClient.get(`${API_URL}/students/${studentId}/invoices`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching student invoices:", error);
+      return {
+        success: false,
+        message: "Failed to fetch student invoices",
+        data: {
+          invoices: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 0
+          }
+        }
+      };
+    }
+  },
+
+  // Get current student's invoices
+  getCurrentStudentInvoices: async (): Promise<InvoiceResponse> => {
+    try {
+      const response = await axiosClient.get(`${API_URL}/student/current/invoices`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching current student invoices:", error);
+      return {
+        success: false,
+        message: "Failed to fetch invoices",
+        data: {
+          invoices: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 0
+          }
+        }
+      };
+    }
+  },
+};
+
+// React Query hooks
+export const useGetStudentInvoices = (studentId: number) => {
+  return useQuery({
+    queryKey: ['studentInvoices', studentId],
+    queryFn: () => invoiceApi.getInvoicesByStudent(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useGetCurrentStudentInvoices = () => {
+  return useQuery({
+    queryKey: ['currentStudentInvoices'],
+    queryFn: () => invoiceApi.getCurrentStudentInvoices(),
+  });
 };
 
 export default invoiceApi; 

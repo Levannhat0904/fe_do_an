@@ -13,6 +13,7 @@ import { setCookie } from "cookies-next";
 import { twMerge } from "tailwind-merge";
 import { phoneRegex } from "@/constants";
 import dayjs from "dayjs";
+import { RcFile } from "antd/es/upload";
 
 type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
 
@@ -130,6 +131,21 @@ export const getBase64 = (img: FileType, callback: (url: string) => void) => {
   reader.readAsDataURL(img);
 };
 
+export const fileToBase64 = (file: RcFile): Promise<string | null> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        resolve(result);
+      } else {
+        resolve(null);
+      }
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
 export const getOptions = (data: any, value: string, name: string, imageUrl?: string) => {
   const options = data?.map((record: any) => {
     return {

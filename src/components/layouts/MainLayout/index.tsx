@@ -16,10 +16,12 @@ export default function MainLayout({
   return (
     <LayoutProvider>
       <Layout className="flex" hasSider>
+        {/* <Sidebar /> */}
         {adminProfile?.profile.role === UserType.admin ? <Sidebar /> : null}
         <Layout className="flex-1 flex flex-col !bg-neutral9">
           {adminProfile?.profile.role === UserType.admin ? <Header /> : null}
-          <Content className="h-[calc(100vh-64px)] p-6 overflow-y-auto bg-white rounded-tl-[20px]">
+          {/* <Header /> */}
+          <Content className="h-[calc(100vh-64px)] overflow-y-auto bg-white rounded-tl-[20px]">
             {children}
           </Content>
         </Layout>

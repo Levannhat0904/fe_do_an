@@ -10,7 +10,6 @@ const axiosClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${getCookie(KTX_ADMIN_ACCESS_TOKEN)}`,
     'Accept': 'application/json',
   },
 });
@@ -25,6 +24,11 @@ export const publicAxios = axios.create({
 
 axiosClient.interceptors.request.use(
   (config) => {
+    // Dynamically get the token on each request
+    const token = getCookie(KTX_ADMIN_ACCESS_TOKEN);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
