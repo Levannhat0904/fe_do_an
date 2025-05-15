@@ -58,9 +58,7 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
   const { adminProfile } = useAuth();
   const [fileAvatar, setFileAvatar] = useState<UploadFile | null>(null);
   const [displayAvatar, setDisplayAvatar] = useState(
-    student?.avatarPath
-      ? `http://localhost:3000${student?.avatarPath}`
-      : LOGO_URL
+    student?.avatarPath ? student?.avatarPath : LOGO_URL
   );
 
   const updateProfileMutation = useUpdateStudentProfile();
@@ -75,7 +73,7 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
         birthDate: student.birthDate ? dayjs(student.birthDate) : undefined,
       });
       if (student.avatarPath) {
-        setDisplayAvatar(`http://localhost:3000${student.avatarPath}`);
+        setDisplayAvatar(student.avatarPath);
       }
     }
   }, [student, open, form]);

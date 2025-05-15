@@ -13,19 +13,20 @@ export default function AdminLayout({
   const { adminProfile, isPending } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!isPending && adminProfile?.profile.role !== UserType.admin) {
-      router.push(RoutersStudent.home);
-    }
-  }, [adminProfile, router, isPending]);
+  // useEffect(() => {
+  //   if (!isPending && adminProfile?.profile.role !== UserType.admin) {
+  //     router.push(RoutersStudent.home);
+  //   }
+  // }, [adminProfile, router, isPending]);
 
-  if (isPending) {
-    return <KLoading />;
-  }
+  // if (isPending) {
+  //   return <KLoading />;
+  // }
 
-  if (!adminProfile) {
-    return <div>Not found</div>;
-  }
+  // if (!adminProfile) {
+  //   return <div>Not found</div>;
+  // }
 
-  return <>{adminProfile?.profile.role === UserType.admin ? children : null}</>;
+  // return <>{adminProfile?.profile.role === UserType.admin ? children : null}</>;
+  return <>{children}</>;
 }

@@ -224,7 +224,7 @@ const StudentHeader: React.FC = () => {
                 <Image
                   src={
                     user?.profile?.avatarPath
-                      ? "http://localhost:3000" + user?.profile?.avatarPath
+                      ? user?.profile?.avatarPath
                       : LOGO_URL
                   }
                   alt="avatar"

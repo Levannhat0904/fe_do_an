@@ -41,11 +41,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick }) => {
       >
         <div>
           <Image
-            src={
-              student?.avatarPath
-                ? "http://localhost:3000" + student?.avatarPath
-                : LOGO_URL
-            }
+            src={student?.avatarPath ? student?.avatarPath : LOGO_URL}
             style={{ border: "4px solid white" }}
             width={120}
             height={120}
