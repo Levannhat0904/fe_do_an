@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, Row, Col, Avatar, Typography, Badge } from "antd";
 import { EditOutlined, UserOutlined } from "@ant-design/icons";
-import { Student } from "@/types/student";
+import { AdminProfile } from "@/types/student";
 import Image from "next/image";
 import { LOGO_URL } from "@/constants";
 import { KButton } from "@/components/atoms";
@@ -9,7 +9,7 @@ import { KButton } from "@/components/atoms";
 const { Title, Text } = Typography;
 
 interface StudentCardProps {
-  student: Student | null;
+  student: AdminProfile | null;
   onClick: () => void;
 }
 
@@ -41,7 +41,11 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick }) => {
       >
         <div>
           <Image
-            src={student?.avatarPath ? student?.avatarPath : LOGO_URL}
+            src={
+              student?.profile?.avatarPath
+                ? student?.profile?.avatarPath
+                : LOGO_URL
+            }
             style={{ border: "4px solid white" }}
             width={120}
             height={120}
@@ -56,13 +60,13 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick }) => {
                 level={2}
                 className="md:s5-medium text-sm whitespace-nowrap"
               >
-                {student?.fullName || "Sinh viên"}
+                {student?.profile?.fullName || "Sinh viên"}
               </Title>
               <EditOutlined className="ml-2 text-lg font-bold !text-black mb-2" />
             </div>
             <Text className="s5-regular text-dark_1 text-sm">
-              MSSV: {student?.studentCode} | {student?.faculty} -{" "}
-              {student?.major}
+              MSSV: {student?.profile?.staffCode} | {student?.profile?.role} -{" "}
+              {student?.profile?.department}
             </Text>
           </div>
           <div>
@@ -83,7 +87,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick }) => {
           </div>
           <div>
             <Text className="s5-regular text-dark-2 text-sm">
-              Lớp: {student?.className}
+              Lớp: {student?.profile?.department}
             </Text>
           </div>
         </div>

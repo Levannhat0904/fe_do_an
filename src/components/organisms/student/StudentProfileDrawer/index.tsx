@@ -13,6 +13,11 @@ import {
   Spin,
   Avatar,
   UploadFile,
+  Radio,
+  Row,
+  Col,
+  Card,
+  Divider,
 } from "antd";
 import {
   UploadOutlined,
@@ -20,9 +25,12 @@ import {
   CloseOutlined,
   UserOutlined,
   CameraOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { Student } from "@/types/student";
+import { AdminProfile, Student } from "@/types/student";
 import { useUpdateStudentProfile } from "@/api/student";
 import { useAuth } from "@/contexts/AuthContext";
 import { ACCEPT_IMAGE_FILE } from "@/constants";
@@ -32,19 +40,24 @@ import Image from "next/image";
 import { RcFile } from "antd/es/upload";
 import { fileToBase64 } from "@/utils/common";
 import { LOGO_URL } from "../../../../constants/common";
+import { KInput } from "@/components/atoms";
+import {
+  useGetProvinces,
+  Province,
+  Ward,
+  District,
+} from "@/api/administrative";
+import { useGetDistricts, useGetWards } from "@/api/administrative";
+import { FACULTY_OPTIONS, MAJOR_OPTIONS } from "@/constants/values";
+
 const { Option } = Select;
 
 interface StudentProfileDrawerProps {
   open: boolean;
   onClose: () => void;
-  student: Student | null;
+  student: AdminProfile | null;
   onSuccess?: () => void;
 }
-
-const genderOptions = [
-  { label: "Nam", value: "male" },
-  { label: "Nữ", value: "female" },
-];
 
 const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
   open,
@@ -54,27 +67,44 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [fileList, setFileList] = useState<any[]>([]);
-  const { adminProfile } = useAuth();
   const [fileAvatar, setFileAvatar] = useState<UploadFile | null>(null);
   const [displayAvatar, setDisplayAvatar] = useState(
-    student?.avatarPath ? student?.avatarPath : LOGO_URL
+    student?.profile?.avatarPath ? student?.profile?.avatarPath : LOGO_URL
   );
+  const { data: provinces } = useGetProvinces();
+  const [selectedProvince, setSelectedProvince] = useState<number>();
+  const [selectedDistrict, setSelectedDistrict] = useState<number>();
+  const { data: districts } = useGetDistricts(selectedProvince!);
+  const { data: wards } = useGetWards(selectedProvince!, selectedDistrict!);
+  const [selectedFaculty, setSelectedFaculty] = useState<string>();
 
   const updateProfileMutation = useUpdateStudentProfile();
-  console.log("student", student);
+
   useEffect(() => {
     if (student && open) {
       form.setFieldsValue({
         ...student,
-        province: student.province?.toString(),
-        district: student.district?.toString(),
-        ward: student.ward?.toString(),
-        birthDate: student.birthDate ? dayjs(student.birthDate) : undefined,
+        fullName: student.profile.fullName,
+        studentCode: student.profile.studentCode,
+        gender: student.profile.gender,
+        phone: student.profile.phone,
+        province: Number(student.profile.province),
+        district: Number(student.profile.district),
+        ward: Number(student.profile.ward),
+        address: student.profile.address,
+        faculty: student.profile.faculty,
+        major: student.profile.major,
+        className: student.profile.className,
+        birthDate: student.profile.birthDate
+          ? dayjs(student.profile.birthDate)
+          : undefined,
       });
-      if (student.avatarPath) {
-        setDisplayAvatar(student.avatarPath);
+      if (student.profile.avatarPath) {
+        setDisplayAvatar(student.profile.avatarPath);
       }
+      setSelectedProvince(Number(student.profile.province));
+      setSelectedDistrict(Number(student.profile.district));
+      setSelectedFaculty(student.profile.role);
     }
   }, [student, open, form]);
 
@@ -84,22 +114,12 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
     try {
       setLoading(true);
       const formData = new FormData();
+      console.log(fileAvatar);
 
-      // For student users, we always allow them to update their own profile
-      // without needing to check IDs, since this component is only visible to them
-      // for their own profile
-      const isAdmin = adminProfile?.userType === "admin";
-
-      // Add debug logging
-      console.log("Student profile update - User:", adminProfile);
-      console.log("Student profile being updated:", student);
-
-      // Xử lý file upload nếu có
       if (fileAvatar) {
-        formData.append("avatarPath", fileAvatar.originFileObj as Blob);
+        formData.append("avatarPath", fileAvatar as any);
       }
 
-      // Thêm các field khác
       Object.keys(values).forEach((key) => {
         if (key !== "avatarPath") {
           if (key === "birthDate" && values[key]) {
@@ -110,7 +130,6 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
         }
       });
 
-      // Gọi API cập nhật thông tin sinh viên
       await updateProfileMutation.mutateAsync({
         id: student.id,
         data: formData,
@@ -121,37 +140,26 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
       }
 
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating student profile:", error);
+      if (error?.response?.data?.field) {
+        form.setFields([
+          {
+            name: error.response.data.field,
+            errors: [error.response.data.message],
+          },
+        ]);
+      } else {
+        message.error(
+          error?.response?.data?.message ||
+            "Có lỗi xảy ra khi cập nhật thông tin. Vui lòng thử lại!"
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const uploadProps = {
-    beforeUpload: (file: any) => {
-      // Kiểm tra định dạng file
-      const isImage = file.type.startsWith("image/");
-      if (!isImage) {
-        message.error("Chỉ được tải lên file ảnh!");
-        return Upload.LIST_IGNORE;
-      }
-
-      // Kiểm tra kích thước file (tối đa 2MB)
-      const isLt2M = file.size / 1024 / 1024 < 2;
-      if (!isLt2M) {
-        message.error("Ảnh phải nhỏ hơn 2MB!");
-        return Upload.LIST_IGNORE;
-      }
-
-      return false; // Không tự động upload ngay
-    },
-    onChange: ({ fileList }: any) => {
-      setFileList(fileList);
-    },
-    fileList,
-    maxCount: 1,
-  };
   const handleUploadFile = useCallback(
     async (info: UploadChangeParam<UploadFile>) => {
       const file = info?.file;
@@ -172,6 +180,33 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
     },
     []
   );
+
+  const handleProvinceChange = (value: number) => {
+    setSelectedProvince(value);
+    setSelectedDistrict(undefined);
+    form.setFieldsValue({
+      district: undefined,
+      ward: undefined,
+    });
+  };
+
+  const handleDistrictChange = (value: number) => {
+    setSelectedDistrict(value);
+    form.setFieldsValue({
+      ward: undefined,
+    });
+  };
+
+  const handleFacultyChange = (value: string) => {
+    setSelectedFaculty(value);
+    form.setFieldsValue({
+      major: undefined,
+    });
+  };
+
+  const filterOption = (input: string, option?: { children: string }) => {
+    return (option?.children || "").toLowerCase().includes(input.toLowerCase());
+  };
 
   return (
     <Drawer
@@ -197,18 +232,20 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
         </div>
       }
     >
-      {loading ? (
-        <div className="flex justify-center items-center h-full">
-          <Spin size="large" />
-        </div>
-      ) : (
+      <div className="relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white bg-opacity-80 z-10 flex items-center justify-center">
+            <Spin size="large" />
+          </div>
+        )}
         <Form
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
           className="animate-fadeIn"
         >
-          <div className="relative w-full flex justify-center mt-3">
+          {/* Phần ảnh chân dung */}
+          <div className="relative w-full flex justify-center mb-6">
             <Upload
               accept={ACCEPT_IMAGE_FILE}
               showUploadList={false}
@@ -217,166 +254,296 @@ const StudentProfileDrawer: React.FC<StudentProfileDrawerProps> = ({
             >
               <div className="relative cursor-pointer">
                 <Image
-                  src={student?.avatarPath ? displayAvatar : ""}
+                  src={displayAvatar}
                   alt="avatar"
                   width={100}
                   height={100}
                   className="rounded-full object-cover aspect-square border-2 border-gray-300"
                 />
-                <div className="absolute  left-1/2 transform bg-gray-100 -translate-x-1/2 -translate-y-1/2 rounded-full p-2 shadow-md">
+                <div className="absolute left-1/2 transform bg-gray-100 -translate-x-1/2 -translate-y-1/2 rounded-full p-2 shadow-md">
                   <CameraOutlined className="text-2xl text-gray-600 cursor-pointer" />
                 </div>
               </div>
             </Upload>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Thông tin cơ bản */}
-            <div className="col-span-2">
-              <h2 className="text-lg font-medium mb-4 text-orange-500">
-                Thông tin cơ bản
-              </h2>
-            </div>
 
-            <Form.Item
-              name="fullName"
-              label="Họ và tên"
-              rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
-            >
-              <Input placeholder="Nhập họ và tên" />
-            </Form.Item>
+          {/* Phần 1: Thông tin cá nhân */}
+          <Divider orientation="left" className="!text-gray-600 !s4-semibold">
+            Thông tin cá nhân
+          </Divider>
 
-            <Form.Item
-              name="studentCode"
-              label="Mã sinh viên"
-              rules={[
-                { required: true, message: "Vui lòng nhập mã sinh viên" },
-              ]}
-            >
-              <Input disabled placeholder="Mã sinh viên" />
-            </Form.Item>
+          <Row gutter={16}>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Mã số sinh viên"
+                name="studentCode"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã số sinh viên!" },
+                ]}
+              >
+                <KInput
+                  prefix={<UserOutlined className="text-gray-400" />}
+                  placeholder="Nhập MSSV"
+                  disabled
+                />
+              </Form.Item>
+            </Col>
 
-            <Form.Item
-              name="birthDate"
-              label="Ngày sinh"
-              rules={[{ required: true, message: "Vui lòng chọn ngày sinh" }]}
-            >
-              <DatePicker
-                format="DD/MM/YYYY"
-                style={{ width: "100%" }}
-                placeholder="Chọn ngày sinh"
-              />
-            </Form.Item>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Họ và tên"
+                name="fullName"
+                rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
+              >
+                <KInput placeholder="Nhập họ tên đầy đủ" />
+              </Form.Item>
+            </Col>
 
-            <Form.Item
-              name="gender"
-              label="Giới tính"
-              rules={[{ required: true, message: "Vui lòng chọn giới tính" }]}
-            >
-              <Select placeholder="Chọn giới tính">
-                {genderOptions.map((option) => (
-                  <Option key={option.value} value={option.value}>
-                    {option.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Giới tính"
+                name="gender"
+                rules={[
+                  { required: true, message: "Vui lòng chọn giới tính!" },
+                ]}
+              >
+                <Radio.Group>
+                  <Radio value="male">Nam</Radio>
+                  <Radio value="female">Nữ</Radio>
+                  <Radio value="other">Khác</Radio>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
 
-            {/* <Form.Item
-              name="avatarPath"
-              label="Ảnh đại diện"
-              valuePropName="fileList"
-              getValueFromEvent={(e) => {
-                if (Array.isArray(e)) {
-                  return e;
-                }
-                return e?.fileList;
-              }}
-            >
-              <Upload {...uploadProps} listType="picture">
-                <Button icon={<UploadOutlined />}>Tải lên ảnh</Button>
-              </Upload>
-            </Form.Item> */}
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Ngày sinh"
+                name="birthDate"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày sinh!" },
+                ]}
+              >
+                <DatePicker
+                  className="!rounded-lg !sbody-code !h-12 w-full"
+                  format="DD/MM/YYYY"
+                  disabledDate={(current) =>
+                    current && current > dayjs().endOf("day")
+                  }
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            {/* Thông tin liên hệ */}
-            <div className="col-span-2 mt-4">
-              <h2 className="text-lg font-medium mb-4 text-orange-500">
-                Thông tin liên hệ
-              </h2>
-            </div>
+          {/* Phần 2: Thông tin liên lạc */}
+          <Divider orientation="left" className="!text-gray-600 !s4-semibold">
+            Thông tin liên lạc
+          </Divider>
 
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                { required: true, message: "Vui lòng nhập email" },
-                { type: "email", message: "Email không hợp lệ" },
-              ]}
-            >
-              <Input placeholder="Nhập email" />
-            </Form.Item>
+          <Row gutter={16}>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Số điện thoại"
+                name="phone"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại!" },
+                  {
+                    pattern: /^[0-9]{10,11}$/,
+                    message: "Số điện thoại không hợp lệ!",
+                  },
+                ]}
+              >
+                <KInput
+                  prefix={<PhoneOutlined className="text-gray-400" />}
+                  placeholder="Nhập số điện thoại"
+                />
+              </Form.Item>
+            </Col>
 
-            <Form.Item
-              name="phone"
-              label="Số điện thoại"
-              rules={[
-                { required: true, message: "Vui lòng nhập số điện thoại" },
-                {
-                  pattern: /^[0-9]{10}$/,
-                  message: "Số điện thoại phải có 10 chữ số",
-                },
-              ]}
-            >
-              <Input placeholder="Nhập số điện thoại" />
-            </Form.Item>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Email cá nhân"
+                name="email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
+                <KInput
+                  prefix={<MailOutlined className="text-gray-400" />}
+                  placeholder="Nhập email cá nhân"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            {/* Thông tin địa chỉ */}
-            <div className="col-span-2 mt-4">
-              <h2 className="text-lg font-medium mb-4 text-orange-500">
-                Địa chỉ thường trú
-              </h2>
-            </div>
+          {/* Phần 3: Thông tin địa chỉ */}
+          <Divider orientation="left" className="!text-gray-600 !s4-semibold">
+            Thông tin địa chỉ
+          </Divider>
 
-            <Form.Item name="province" label="Tỉnh/Thành phố">
-              <Input placeholder="Nhập tỉnh/thành phố" />
-            </Form.Item>
+          <Row gutter={16}>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Tỉnh/Thành phố"
+                name="province"
+                rules={[
+                  { required: true, message: "Vui lòng chọn tỉnh/thành phố!" },
+                ]}
+              >
+                <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
+                  showSearch
+                  placeholder="Chọn tỉnh/thành phố"
+                  onChange={handleProvinceChange}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {provinces?.map((province: Province) => (
+                    <Option key={province.code} value={province.code}>
+                      {province.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
 
-            <Form.Item name="district" label="Quận/Huyện">
-              <Input placeholder="Nhập quận/huyện" />
-            </Form.Item>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Quận/Huyện"
+                name="district"
+                rules={[
+                  { required: true, message: "Vui lòng chọn quận/huyện!" },
+                ]}
+              >
+                <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
+                  showSearch
+                  placeholder="Chọn quận/huyện"
+                  disabled={!selectedProvince}
+                  onChange={handleDistrictChange}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {districts?.data?.map((district: District) => (
+                    <Option key={district.code} value={district.code}>
+                      {district.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
 
-            <Form.Item name="ward" label="Phường/Xã">
-              <Input placeholder="Nhập phường/xã" />
-            </Form.Item>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Phường/Xã"
+                name="ward"
+                rules={[
+                  { required: true, message: "Vui lòng chọn phường/xã!" },
+                ]}
+              >
+                <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
+                  showSearch
+                  placeholder="Chọn phường/xã"
+                  disabled={!selectedDistrict}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {wards?.data?.map((ward: Ward) => (
+                    <Option key={ward.code} value={ward.code}>
+                      {ward.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
 
-            <Form.Item
-              name="address"
-              label="Địa chỉ chi tiết"
-              className="col-span-2"
-            >
-              <Input placeholder="Nhập địa chỉ chi tiết" />
-            </Form.Item>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Địa chỉ chi tiết"
+                name="address"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập địa chỉ chi tiết!",
+                  },
+                ]}
+              >
+                <KInput
+                  suffix={<HomeOutlined className="text-gray-400" />}
+                  placeholder="Số nhà, tên đường..."
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            {/* Thông tin học vụ */}
-            <div className="col-span-2 mt-4">
-              <h2 className="text-lg font-medium mb-4 text-orange-500">
-                Thông tin học vụ
-              </h2>
-            </div>
+          {/* Phần 4: Thông tin học vụ */}
+          <Divider orientation="left" className="!text-gray-600 !s4-semibold">
+            Thông tin học vụ
+          </Divider>
 
-            <Form.Item name="faculty" label="Khoa">
-              <Input placeholder="Nhập khoa" />
-            </Form.Item>
+          <Row gutter={16}>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Khoa"
+                name="faculty"
+                rules={[{ required: true, message: "Vui lòng chọn khoa!" }]}
+              >
+                <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
+                  showSearch
+                  placeholder="Chọn khoa"
+                  onChange={handleFacultyChange}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {FACULTY_OPTIONS.map((faculty: any) => (
+                    <Option key={faculty.value} value={faculty.value}>
+                      {faculty.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
 
-            <Form.Item name="major" label="Ngành">
-              <Input placeholder="Nhập ngành học" />
-            </Form.Item>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Chuyên ngành"
+                name="major"
+                rules={[
+                  { required: true, message: "Vui lòng chọn chuyên ngành!" },
+                ]}
+              >
+                <Select
+                  className="!rounded-lg !sbody-code !h-12 w-full"
+                  showSearch
+                  placeholder="Chọn chuyên ngành"
+                  disabled={!selectedFaculty}
+                  filterOption={filterOption}
+                  optionFilterProp="children"
+                >
+                  {selectedFaculty &&
+                    MAJOR_OPTIONS[selectedFaculty]?.map((major) => (
+                      <Option key={major.value} value={major.value}>
+                        {major.label}
+                      </Option>
+                    ))}
+                </Select>
+              </Form.Item>
+            </Col>
 
-            <Form.Item name="className" label="Lớp">
-              <Input placeholder="Nhập lớp" />
-            </Form.Item>
-          </div>
+            <Col xs={24} md={12} lg={12}>
+              <Form.Item
+                label="Lớp"
+                name="className"
+                rules={[{ required: true, message: "Vui lòng nhập lớp!" }]}
+              >
+                <KInput placeholder="Nhập tên lớp" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
-      )}
+      </div>
     </Drawer>
   );
 };

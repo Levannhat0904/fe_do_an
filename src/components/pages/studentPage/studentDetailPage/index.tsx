@@ -40,6 +40,7 @@ import DormitoryInfo from "./components/DormitoryInfor";
 import RoommateInfo from "./components/RoommateInfo";
 import dayjs from "dayjs";
 import HistoryTimeline from "./components/HistoryTimeline";
+import { LOGO_URL } from "@/constants";
 
 const StudentDormitoryDetail = () => {
   const params = useParams();
@@ -266,7 +267,7 @@ const StudentDormitoryDetail = () => {
               <div className="w-16 h-16">
                 {student?.avatarPath ? (
                   <Image
-                    src={`${API_URL}${student?.avatarPath}`}
+                    src={`${student?.avatarPath ?? LOGO_URL}`}
                     alt="avatar"
                     width={64}
                     height={64}

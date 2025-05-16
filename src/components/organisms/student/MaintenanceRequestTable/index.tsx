@@ -1,6 +1,7 @@
 import React from "react";
-import { Table, Tag, Button } from "antd";
+import { Table, Tag, Button, Space } from "antd";
 import { MaintenanceRequest } from "@/types/student";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface MaintenanceRequestTableProps {
   maintenanceRequests: MaintenanceRequest[];
@@ -18,6 +19,8 @@ const MaintenanceRequestTable: React.FC<MaintenanceRequestTableProps> = ({
   onViewDetail,
   onCancelRequest,
 }) => {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   // Hàm lấy màu cho tag trạng thái
   const getStatusColor = (status: string) => {
     const statusColors: Record<string, string> = {
@@ -45,22 +48,27 @@ const MaintenanceRequestTable: React.FC<MaintenanceRequestTableProps> = ({
       title: "Mã yêu cầu",
       dataIndex: "requestNumber",
       key: "requestNumber",
+      width: isMobile ? 100 : 120,
+      fixed: isMobile ? undefined : ("left" as const),
     },
     {
       title: "Loại yêu cầu",
       dataIndex: "requestType",
       key: "requestType",
+      width: isMobile ? 120 : 150,
     },
     {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
+      width: isMobile ? 150 : 200,
       ellipsis: true,
     },
     {
       title: "Mức độ ưu tiên",
       dataIndex: "priority",
       key: "priority",
+      width: isMobile ? 120 : 150,
       render: (priority: string) => (
         <Tag color={getPriorityColor(priority)}>
           {priority === "high"
@@ -77,6 +85,7 @@ const MaintenanceRequestTable: React.FC<MaintenanceRequestTableProps> = ({
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
+      width: isMobile ? 120 : 150,
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>
           {status === "completed"
@@ -93,24 +102,26 @@ const MaintenanceRequestTable: React.FC<MaintenanceRequestTableProps> = ({
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
+      width: isMobile ? 120 : 150,
       render: (date: string) =>
         date ? new Date(date).toLocaleDateString("vi-VN") : "",
     },
     {
       title: "Hành động",
       key: "action",
+      fixed: isMobile ? undefined : ("right" as const),
+      width: isMobile ? 140 : 160,
       render: (_: any, record: MaintenanceRequest) => (
-        <>
+        <Space size="small" wrap>
           <Button
-            size="small"
+            size={isMobile ? "small" : "middle"}
             onClick={() => onViewDetail && record.id && onViewDetail(record.id)}
-            style={{ marginRight: 8 }}
           >
             Chi tiết
           </Button>
           {record.status === "pending" && (
             <Button
-              size="small"
+              size={isMobile ? "small" : "middle"}
               danger
               onClick={() =>
                 onCancelRequest && record.id && onCancelRequest(record.id)
@@ -119,7 +130,7 @@ const MaintenanceRequestTable: React.FC<MaintenanceRequestTableProps> = ({
               Hủy
             </Button>
           )}
-        </>
+        </Space>
       ),
     },
   ];
@@ -129,7 +140,13 @@ const MaintenanceRequestTable: React.FC<MaintenanceRequestTableProps> = ({
       columns={columns}
       dataSource={maintenanceRequests}
       rowKey="id"
-      pagination={{ pageSize: 5 }}
+      pagination={{
+        pageSize: 5,
+        responsive: true,
+        position: ["bottomCenter"],
+      }}
+      scroll={{ x: isMobile ? 900 : 1100 }}
+      size={isMobile ? "small" : "middle"}
     />
   );
 };

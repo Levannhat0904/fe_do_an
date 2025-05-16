@@ -38,10 +38,11 @@ const HomeCard: React.FC<HomeCardProps> = ({
 }) => {
   return (
     <Card
-      className="overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer animate-fadeIn hover-scale"
+      className="overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer animate-fadeIn hover-scale w-full"
       style={{
         borderRadius: "12px",
         borderTop: `4px solid ${color}`,
+        height: "100%", // This ensures the card takes full height
       }}
       bodyStyle={{ padding: "20px" }}
       onClick={onClick}
@@ -100,8 +101,7 @@ export const RoomCard: React.FC<{
 }> = ({ roomNumber, buildingName, onClick }) => (
   <HomeCard
     title="Phòng ở hiện tại"
-    value={roomNumber}
-    description={`Tòa nhà: ${buildingName}`}
+    value={roomNumber ? `${roomNumber} - ${buildingName}` : "Chưa có phòng"}
     icon={<HomeOutlined />}
     color="#fa8c16"
     onClick={onClick}
@@ -115,10 +115,9 @@ export const ContractCard: React.FC<{
 }> = ({ count, activeCount, onClick }) => (
   <HomeCard
     title="Hợp đồng của bạn"
-    value={count}
-    description={`${activeCount} hợp đồng đang hiệu lực`}
+    value={activeCount ? `Đang hiệu lực` : "Hết hạn"}
     icon={<FileTextOutlined />}
-    color="#1890ff"
+    color={activeCount > 0 ? "#52c41a" : "#fa8c16"}
     progress={count > 0 ? (activeCount / count) * 100 : 0}
     onClick={onClick}
   />
@@ -131,10 +130,10 @@ export const InvoiceCard: React.FC<{
 }> = ({ pendingCount, totalCount, onClick }) => (
   <HomeCard
     title="Hóa đơn cần thanh toán"
-    value={pendingCount}
-    description={`Tổng cộng: ${totalCount} hóa đơn`}
+    value={pendingCount > 0 ? `${pendingCount} hóa đơn` : "Đã thanh toán"}
+    // description={`Tổng cộng: ${totalCount} hóa đơn`}
     icon={<CreditCardOutlined />}
-    color={pendingCount > 0 ? "#fa541c" : "#52c41a"}
+    color={pendingCount > 0 ? "#fa8c16" : "#52c41a"}
     onClick={onClick}
   />
 );
@@ -148,7 +147,7 @@ export const MaintenanceCard: React.FC<{
     title="Yêu cầu bảo trì"
     value={pendingCount > 0 ? `${pendingCount} đang xử lý` : "Đã hoàn thành"}
     icon={<ToolOutlined />}
-    color={pendingCount > 0 ? "#fa541c" : "#52c41a"}
+    color={pendingCount > 0 ? "#fa8c16" : "#52c41a"}
     progress={
       totalCount > 0 ? ((totalCount - pendingCount) / totalCount) * 100 : 100
     }

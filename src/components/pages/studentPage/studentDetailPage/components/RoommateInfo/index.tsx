@@ -45,7 +45,7 @@ const RoommateInfo = (props: Iprops) => {
       key: "avatarPath",
       render: (avatarPath: string) => (
         <Avatar
-          src={avatarPath ? `${API_URL}${avatarPath}` : null}
+          src={avatarPath ? `${avatarPath}` : null}
           icon={!avatarPath && <UserOutlined />}
         />
       ),

@@ -25,6 +25,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useGetCurrentStudentInvoices } from "@/api/invoice";
 import { Invoice } from "@/types/student";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -47,6 +48,8 @@ const InvoicePage: React.FC = () => {
     isError,
     error,
   } = useGetCurrentStudentInvoices();
+
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
     if (invoiceData?.success && invoiceData?.data?.invoices) {
@@ -110,11 +113,14 @@ const InvoicePage: React.FC = () => {
       title: "Số hóa đơn",
       dataIndex: "invoiceNumber",
       key: "invoiceNumber",
+      width: isMobile ? 100 : 120,
+      fixed: isMobile ? undefined : ("left" as const),
     },
     {
       title: "Tháng",
       dataIndex: "invoiceMonth",
       key: "invoiceMonth",
+      width: isMobile ? 120 : 140,
       render: (date: string) =>
         date
           ? new Date(date).toLocaleDateString("vi-VN", {
@@ -127,6 +133,7 @@ const InvoicePage: React.FC = () => {
       title: "Hạn thanh toán",
       dataIndex: "dueDate",
       key: "dueDate",
+      width: isMobile ? 100 : 120,
       render: (date: string) =>
         date ? new Date(date).toLocaleDateString("vi-VN") : "",
     },
@@ -134,37 +141,47 @@ const InvoicePage: React.FC = () => {
       title: "Tổng tiền",
       dataIndex: "totalAmount",
       key: "totalAmount",
-      render: (amount: number) =>
-        amount ? `${amount.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ",
+      width: isMobile ? 120 : 130,
+      render: (amount: number) => (
+        <Text strong className="text-orange-500">
+          {amount ? `${amount.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+        </Text>
+      ),
     },
     {
       title: "Trạng thái",
       dataIndex: "paymentStatus",
       key: "paymentStatus",
+      width: isMobile ? 100 : 120,
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
       ),
     },
     {
-      title: "Ngày thanh toán",
+      title: "Ngày TT",
       dataIndex: "paymentDate",
       key: "paymentDate",
+      width: isMobile ? 100 : 120,
       render: (date: string) =>
         date ? new Date(date).toLocaleDateString("vi-VN") : "-",
     },
     {
       title: "Hành động",
       key: "action",
+      fixed: isMobile ? undefined : ("right" as const),
+      width: isMobile ? 140 : 160,
       render: (_: any, record: Invoice) => (
-        <Space size="middle">
-          <Button
-            type="primary"
-            style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
-            disabled={record.paymentStatus === "paid"}
-          >
-            Thanh toán
-          </Button>
-          <Button>Chi tiết</Button>
+        <Space size="small">
+          {record.paymentStatus !== "paid" && (
+            <Button
+              type="primary"
+              style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
+              size="small"
+            >
+              Thanh toán
+            </Button>
+          )}
+          <Button size="small">Chi tiết</Button>
         </Space>
       ),
     },
@@ -179,8 +196,8 @@ const InvoicePage: React.FC = () => {
   }
 
   return (
-    <Layout style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <Content style={{ padding: "20px" }}>
+    <Layout className="min-h-screen bg-gray-50">
+      <Content className="p-4 md:p-6">
         <Card style={{ marginBottom: 20, borderRadius: 8 }}>
           <Title level={3} style={{ color: "#fa8c16", margin: 0 }}>
             <CreditCardOutlined /> Quản lý hóa đơn
@@ -189,15 +206,11 @@ const InvoicePage: React.FC = () => {
         </Card>
 
         {/* Thống kê */}
-        <Row gutter={16} style={{ marginBottom: 20 }}>
+        <Row gutter={[16, 16]} className="mb-6">
           <Col xs={24} sm={12}>
             <Card
-              style={{
-                borderRadius: 8,
-                backgroundColor: "#ffece0",
-                borderColor: "#ffece0",
-              }}
-              bodyStyle={{ padding: 16 }}
+              className="rounded-lg bg-orange-50 border-orange-50 hover:shadow-md transition-shadow"
+              bodyStyle={{ padding: isMobile ? 12 : 16 }}
             >
               <Row align="middle" gutter={16}>
                 <Col>
@@ -214,7 +227,7 @@ const InvoicePage: React.FC = () => {
                       color: "#fa541c",
                     }}
                   >
-                    {totalUnpaid.toLocaleString("vi-VN")} VNĐ
+                    {Number(totalUnpaid).toLocaleString("vi-VN")} VNĐ
                   </div>
                 </Col>
               </Row>
@@ -246,7 +259,7 @@ const InvoicePage: React.FC = () => {
                       color: "#096dd9",
                     }}
                   >
-                    {totalPaid.toLocaleString("vi-VN")} VNĐ
+                    {Number(totalPaid).toLocaleString("vi-VN")} VNĐ
                   </div>
                 </Col>
               </Row>
@@ -255,7 +268,11 @@ const InvoicePage: React.FC = () => {
         </Row>
 
         <Card style={{ borderRadius: 8 }}>
-          <Tabs defaultActiveKey="unpaid">
+          <Tabs
+            defaultActiveKey="unpaid"
+            className="invoice-tabs"
+            size={isMobile ? "small" : "middle"}
+          >
             <TabPane
               tab={
                 <span>
@@ -266,12 +283,17 @@ const InvoicePage: React.FC = () => {
               key="unpaid"
             >
               {unpaidInvoices.length > 0 ? (
-                <Table
-                  columns={columns}
-                  dataSource={unpaidInvoices}
-                  rowKey="id"
-                  pagination={false}
-                />
+                <div className="overflow-x-auto">
+                  <Table
+                    columns={columns}
+                    dataSource={unpaidInvoices}
+                    rowKey="id"
+                    pagination={false}
+                    scroll={{ x: 800 }}
+                    size={isMobile ? "small" : "middle"}
+                    className="whitespace-nowrap"
+                  />
+                </div>
               ) : (
                 <Empty
                   description="Không có hóa đơn nào cần thanh toán"
@@ -288,12 +310,17 @@ const InvoicePage: React.FC = () => {
               key="paid"
             >
               {paidInvoices.length > 0 ? (
-                <Table
-                  columns={columns}
-                  dataSource={paidInvoices}
-                  rowKey="id"
-                  pagination={false}
-                />
+                <div className="overflow-x-auto">
+                  <Table
+                    columns={columns}
+                    dataSource={paidInvoices}
+                    rowKey="id"
+                    pagination={false}
+                    scroll={{ x: 800 }}
+                    size={isMobile ? "small" : "middle"}
+                    className="whitespace-nowrap"
+                  />
+                </div>
               ) : (
                 <Empty
                   description="Không có hóa đơn nào đã thanh toán"

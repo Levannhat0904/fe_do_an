@@ -20,26 +20,9 @@ import { deleteCookie, getCookie } from "cookies-next";
 import useFetchProfile from "@/hooks/profile/useFetchProfile";
 import { CurrentSessionResponse, useLogin, useLogout } from "@/api/auth";
 import { setAuthCookies } from "@/utils";
+import { AdminProfile } from "@/types/student";
 const AuthContext = createContext<{
-  adminProfile:
-    | {
-        id: number;
-        email: string;
-        userType: string;
-        status: string;
-        lastLogin: string;
-        profile: {
-          id: number;
-          staffCode: string;
-          fullName: string;
-          phone: string | null;
-          role: string;
-          department: string | null;
-          avatarPath: string | null;
-          createdAt: string;
-        };
-      }
-    | undefined;
+  adminProfile: AdminProfile | undefined;
   loginLoading: boolean;
   logoutLoading: boolean;
   onLogin: (params: TFormLoginParams) => void;

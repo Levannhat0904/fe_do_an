@@ -25,10 +25,10 @@ const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
     <ConfigProvider theme={theme}>
       <Layout className="min-h-screen bg-gray-50">
         <StudentHeader />
-        <Content className="m-4 md:m-6 !mt-16">
+        <Content className="m-4 md:m-6">
           <div className="site-layout-content animate-fadeIn">{children}</div>
         </Content>
-        <Footer className="text-center fixed bottom-0 left-0 right-0 bg-white p-4 shadow-inner">
+        <Footer className="text-center bg-white p-4 shadow-inner mb-16 md:mb-0">
           <div className="text-gray-600">
             KTX Management System © {new Date().getFullYear()} - Designed by{" "}
             <span className="text-orange-500 font-medium">UTT</span>

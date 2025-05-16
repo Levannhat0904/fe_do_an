@@ -1,6 +1,7 @@
 import React from "react";
-import { Table, Tag, Space, Button } from "antd";
+import { Table, Tag, Space, Button, Typography, Card } from "antd";
 import { Invoice } from "@/types/student";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface InvoiceTableProps {
   invoices: Invoice[];
@@ -18,8 +19,10 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
   onViewInvoiceDetail,
   onPayInvoice,
 }) => {
-  // Hàm lấy màu cho tag trạng thái
-  const getStatusColor = (status: string) => {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return "default";
     const statusColors: Record<string, string> = {
       paid: "success",
       pending: "warning",
@@ -28,65 +31,105 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
     return statusColors[status] || "default";
   };
 
+  const getStatusText = (status: string | undefined) => {
+    if (!status) return "Không xác định";
+    switch (status) {
+      case "paid":
+        return "Đã thanh toán";
+      case "pending":
+        return "Chờ thanh toán";
+      case "overdue":
+        return "Quá hạn";
+      default:
+        return "Không xác định";
+    }
+  };
+
+  const formatDate = (date: string | undefined) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const formatMonth = (date: string | undefined) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("vi-VN", {
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const formatCurrency = (amount: number | undefined) => {
+    if (!amount) return "0 VNĐ";
+    return amount.toLocaleString("vi-VN") + " VNĐ";
+  };
+
   const columns = [
     {
       title: "Số hóa đơn",
       dataIndex: "invoiceNumber",
       key: "invoiceNumber",
+      width: isMobile ? 100 : 120,
+      fixed: isMobile ? undefined : ("left" as const),
     },
     {
       title: "Tháng",
       dataIndex: "invoiceMonth",
       key: "invoiceMonth",
-      render: (date: string) =>
-        date
-          ? new Date(date).toLocaleDateString("vi-VN", {
-              month: "long",
-              year: "numeric",
-            })
-          : "",
+      width: 150,
+      render: (date: string) => formatMonth(date),
     },
     {
       title: "Hạn thanh toán",
       dataIndex: "dueDate",
       key: "dueDate",
-      render: (date: string) =>
-        date ? new Date(date).toLocaleDateString("vi-VN") : "",
+      width: 130,
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Tổng tiền",
       dataIndex: "totalAmount",
       key: "totalAmount",
-      render: (amount: number) =>
-        amount ? `${amount.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ",
+      width: 150,
+      render: (amount: number) => (
+        <Typography.Text strong className="text-orange-500">
+          {formatCurrency(amount)}
+        </Typography.Text>
+      ),
     },
     {
       title: "Trạng thái",
       dataIndex: "paymentStatus",
       key: "paymentStatus",
+      width: 130,
       render: (status: string) => (
-        <Tag color={getStatusColor(status)}>
-          {status === "paid"
-            ? "Đã thanh toán"
-            : status === "pending"
-            ? "Chờ thanh toán"
-            : "Quá hạn"}
-        </Tag>
+        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
       ),
     },
     {
       title: "Hành động",
       key: "action",
+      fixed: isMobile ? undefined : ("left" as const),
+      width: 200,
       render: (_: any, record: Invoice) => (
         <Space size="middle">
-          <Button
-            type="primary"
-            style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
-            disabled={record.paymentStatus === "paid"}
-            onClick={() => onPayInvoice && record.id && onPayInvoice(record.id)}
-          >
-            Thanh toán
-          </Button>
+          {record.paymentStatus !== "paid" && (
+            <Button
+              type="primary"
+              style={{
+                background: "#fa8c16",
+                borderColor: "#fa8c16",
+              }}
+              onClick={() =>
+                onPayInvoice && record.id && onPayInvoice(record.id)
+              }
+            >
+              Thanh toán
+            </Button>
+          )}
           <Button
             onClick={() =>
               onViewInvoiceDetail && record.id && onViewInvoiceDetail(record.id)
@@ -100,12 +143,20 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
   ];
 
   return (
-    <Table
-      columns={columns}
-      dataSource={invoices}
-      rowKey="id"
-      pagination={false}
-    />
+    <div className="bg-white rounded-lg p-4">
+      <Table
+        columns={columns}
+        dataSource={invoices}
+        rowKey="id"
+        pagination={{
+          pageSize: 10,
+          position: ["bottomCenter"],
+          showSizeChanger: false,
+        }}
+        scroll={{ x: 900 }}
+        className="invoice-table"
+      />
+    </div>
   );
 };
 

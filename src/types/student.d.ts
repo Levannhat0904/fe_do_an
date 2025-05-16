@@ -1,5 +1,33 @@
 import { StudentStatusEnum } from "@/constants/enums";
 
+export interface AdminProfile {
+  id: number;
+  email: string;
+  userType: string;
+  status: string;
+  lastLogin: string;
+  profile: {
+    id: number;
+    staffCode: string;
+    fullName: string;
+    studentCode: string | null;
+    phone: string | null;
+    role: string;
+    department: string | null;
+    avatarPath: string | null;
+    createdAt: string;
+    province: string | null;
+    district: string | null;
+    ward: string | null;
+    address: string | null;
+    birthDate: string | null;
+    faculty: string | null;
+    major: string | null;
+    className: string | null;
+    gender: string | null;
+  };
+}
+
 export interface Student {
   id?: number;
   userId?: number;

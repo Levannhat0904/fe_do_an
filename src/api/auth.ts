@@ -5,6 +5,7 @@ import axiosClient from './axiosClient';
 import { KTX_ADMIN_ACCESS_TOKEN } from '@/constants';
 import { getCookie } from 'cookies-next';
 import { setAuthCookies } from '@/utils';
+import { AdminProfile } from '@/types/student';
 const API_URL = 'http://localhost:3000/api';
 
 interface LoginCredentials {
@@ -33,23 +34,7 @@ interface LoginResponse {
 export interface CurrentSessionResponse {
   success: boolean;
   message: string;
-  data: {
-    id: number;
-    email: string;
-    userType: string;
-    status: string;
-    lastLogin: string;
-    profile: {
-      id: number;
-      staffCode: string;
-      fullName: string;
-      phone: string | null;
-      role: string;
-      department: string | null;
-      avatarPath: string | null;
-      createdAt: string;
-    };
-  };
+  data: AdminProfile;
 }
 interface RefreshTokenResponse {
   success: boolean;

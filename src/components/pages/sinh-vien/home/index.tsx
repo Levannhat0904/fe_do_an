@@ -50,6 +50,7 @@ import {
   MaintenanceRequest,
   Roommate,
 } from "@/types/student";
+import useFetchProfile from "@/hooks/profile/useFetchProfile";
 
 const { Content } = Layout;
 const { TabPane } = Tabs;
@@ -78,7 +79,7 @@ const StudentHomePage = () => {
     error: studentError,
     refetch: refetchStudent,
   } = useGetCurrentStudentDetail();
-
+  const { refetch: refetchProfile } = useFetchProfile();
   // Get invoices using React Query
   const {
     data: invoiceData,
@@ -96,7 +97,6 @@ const StudentHomePage = () => {
   useEffect(() => {
     // When student data is loaded from the hook, update our state
     if (studentDetail?.success && studentDetail?.data) {
-      console.log("Student detail loaded:", studentDetail.data);
       setStudentData(studentDetail.data.student || null);
       setRoomData(studentDetail.data.dormitory || null);
       setRoommates(studentDetail.data.roommates || []);
@@ -133,9 +133,7 @@ const StudentHomePage = () => {
 
       if (contractResponse.data) {
         setContracts(contractResponse.data || []);
-        console.log("Set contracts:", contractResponse.data);
       } else {
-        console.log("No contract data available");
         setContracts([]);
       }
     } catch (error) {
@@ -196,7 +194,7 @@ const StudentHomePage = () => {
         {/* Thông tin sinh viên */}
         <div className="relative">
           <StudentCard
-            student={studentData}
+            student={user || null}
             onClick={() => setProfileDrawerVisible(true)}
           />
         </div>
@@ -366,10 +364,11 @@ const StudentHomePage = () => {
         <StudentProfileDrawer
           open={profileDrawerVisible}
           onClose={() => setProfileDrawerVisible(false)}
-          student={studentData}
+          student={user || null}
           onSuccess={() => {
             // Reload student data after successful update
             refetchStudent();
+            refetchProfile();
           }}
         />
       </Content>
