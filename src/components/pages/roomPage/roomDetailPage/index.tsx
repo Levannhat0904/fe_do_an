@@ -54,6 +54,7 @@ import dayjs from "dayjs";
 import roomApi, { RoomDetail, TimelineItem } from "@/api/room";
 import invoiceApi from "@/api/invoice";
 import { DATE_FORMAT, DATE_FORMAT_API, MONTH_FORMAT } from "../../billPage";
+import { StatusEnum } from "@/constants/enums";
 
 interface RoomDetailData extends RoomDetail {}
 
@@ -1349,14 +1350,16 @@ const RoomDetailPage = () => {
         if (status === "paid") {
           return (
             <Badge
-              status="success"
+              status={StatusEnum.Success as any}
               text={`Đã thanh toán ${
                 record.paidDate ? `(${formatDate(record.paidDate)})` : ""
               }`}
             />
           );
-        } else if (status === "pending") {
+        } else if (status === StatusEnum.Pending) {
           return <Badge status="warning" text="Đang chờ thanh toán" />;
+        } else if (status === StatusEnum.WaitingForApproval) {
+          return <Badge status="warning" text="Chờ duyệt" />;
         } else {
           return <Badge status="error" text="Quá hạn" />;
         }
@@ -1373,6 +1376,7 @@ const RoomDetailPage = () => {
               size="small"
               icon={<CheckCircleOutlined />}
               onClick={() => handleUpdatePaymentStatus(record.id)}
+              disabled={record.status !== StatusEnum.WaitingForApproval}
             >
               Đánh dấu đã thu
             </Button>

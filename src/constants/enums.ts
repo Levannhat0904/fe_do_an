@@ -69,6 +69,7 @@ export enum StatusEnum {
   Assigned = "assigned",
   Available = "available",
   Maintenance = "maintenance",
+  WaitingForApproval = "waiting_for_approval",
 }
 
 export enum DrawerEnum {
