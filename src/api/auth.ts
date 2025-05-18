@@ -101,6 +101,11 @@ export const useRefreshToken = () => {
         setAuthCookies({
           accessToken: data.data.accessToken,
           refreshToken: data.data.refreshToken,
+          user: {
+            profile: {
+              role: 'admin',
+            },
+          },
         });
       }
     },

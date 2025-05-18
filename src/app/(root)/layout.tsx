@@ -19,7 +19,6 @@ export default function RootLayout({ children }: Props) {
   const queryClient = new QueryClient();
 
   const pathname = usePathname();
-
   const renderLayout = () => {
     if (AUTH_ROUTES.includes(pathname as Routers)) {
       return <React.Fragment>{children}</React.Fragment>;

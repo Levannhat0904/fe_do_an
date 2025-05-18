@@ -6,6 +6,7 @@ import {
   TFormLoginParams,
   TLoginResponseData,
   TProfileResponseData,
+  UserType,
 } from "@/constants";
 // import { LOGIN } from "@/graphql/mutations";
 import React, { createContext, useContext } from "react";
@@ -54,15 +55,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("data", data);
           if (data.success && data.data) {
             setAuthCookies(data.data);
-            if (data.data?.user?.userType === "admin") {
-              router.push(Routers.home);
-              window.location.reload();
-            } else {
-              router.push(RoutersStudent.home);
-              window.location.reload();
-            }
-            // router.push(Routers.home);
-            // window.location.reload();
+            router.push(Routers.home);
+            window.location.reload();
           }
         },
       }

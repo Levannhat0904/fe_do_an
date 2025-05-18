@@ -5,6 +5,7 @@ import {
   FORMAT_DATE_OPTION1,
   KTX_ADMIN_ACCESS_TOKEN,
   KTX_ADMIN_REFRESH_TOKEN,
+  UserType,
 } from "@/constants";
 import { FormInstance, GetProp, UploadProps } from "antd";
 import type { ClassValue } from "clsx";
@@ -28,12 +29,21 @@ export const formatData = (data?: string | number, message?: string) => {
 export function setAuthCookies(data: {
   accessToken: string;
   refreshToken: string;
+  user: {
+    profile: {
+      role: string;
+    };
+  }
 }) {
+  const path = data.user?.profile?.role !== UserType.student ? DEFAULT_PATH : "/sinh-vien";
   setCookie(KTX_ADMIN_ACCESS_TOKEN, data.accessToken, {
     path: DEFAULT_PATH,
   });
   setCookie(KTX_ADMIN_REFRESH_TOKEN, data.refreshToken, {
     path: DEFAULT_PATH,
+  });
+  setCookie("role", data.user?.profile?.role, {
+    path: path,
   });
 }
 

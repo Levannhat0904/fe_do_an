@@ -27,7 +27,9 @@ import dashboardApi, {
   DashboardSummary,
   OccupancyStats,
 } from "@/api/dashboard";
-
+import { getCookie } from "cookies-next";
+import { UserType } from "@/constants";
+import { useRouter } from "next/navigation";
 const COLORS = ["#1677ff", "#ffd666"];
 
 const StatisticsChart = ({

@@ -9,7 +9,6 @@ export { default as KUploadField } from "./KUploadField";
 export { default as KBox } from "./KBox";
 export { default as KDrawer } from "./KDrawer";
 export * from "./KIcons";
-export { default as KBadge } from "./KBadge";
 export { default as KDivider } from "./KDivider";
 export { default as KCollapse } from "./KCollapse";
 export { default as KProgress } from "./KProgress";

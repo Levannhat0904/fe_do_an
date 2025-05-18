@@ -53,6 +53,11 @@ axiosClient.interceptors.response.use(
             setAuthCookies({
               accessToken: res.data.accessToken,
               refreshToken: res.data.refreshToken,
+              user: {
+                profile: {
+                  role: 'admin',
+                },
+              },
             });
             originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
             return axiosClient(originalRequest);

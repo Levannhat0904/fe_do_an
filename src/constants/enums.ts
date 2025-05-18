@@ -11,6 +11,7 @@ export enum RoutersStudent {
 export enum UserType {
   admin = "admin",
   student = "student",
+  super_admin = "super_admin",
 }
 export enum InputType {
   text = "text",
