@@ -18,7 +18,7 @@ export interface Invoice {
   waterFee: number;
   serviceFee: number;
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'overdue';
+  paymentStatus: 'pending' | 'paid' | 'overdue' | 'waiting_for_approval';
   paymentDate?: string;
   paymentMethod?: string;
   createdAt: string;

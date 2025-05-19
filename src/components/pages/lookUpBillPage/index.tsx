@@ -50,6 +50,7 @@ const statusColors = {
   pending: "orange",
   paid: "green",
   overdue: "red",
+  waiting_for_approval: "orange",
 };
 
 // Invoice status text
@@ -57,6 +58,7 @@ const statusText = {
   pending: "Chờ thanh toán",
   paid: "Đã thanh toán",
   overdue: "Quá hạn",
+  waiting_for_approval: "Chờ duyệt",
 };
 
 const LookUpBillPage = () => {

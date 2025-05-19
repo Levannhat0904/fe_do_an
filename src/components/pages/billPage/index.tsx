@@ -63,6 +63,7 @@ const statusColors = {
   pending: "orange",
   paid: "green",
   overdue: "red",
+  waiting_for_approval: "blue",
 };
 
 // Invoice status text
@@ -70,6 +71,7 @@ const statusText = {
   pending: "Chờ thanh toán",
   paid: "Đã thanh toán",
   overdue: "Quá hạn",
+  waiting_for_approval: "Chờ duyệt",
 };
 
 interface Room {
@@ -802,6 +804,7 @@ const BillPage: React.FC = () => {
       paid: invoices.filter((inv) => inv.paymentStatus === "paid").length,
       pending: invoices.filter((inv) => inv.paymentStatus === "pending").length,
       overdue: invoices.filter((inv) => inv.paymentStatus === "overdue").length,
+      waiting_for_approval: invoices.filter((inv) => inv.paymentStatus === "waiting_for_approval").length,
     };
 
     return stats;
@@ -1003,6 +1006,23 @@ const BillPage: React.FC = () => {
                 suffix={`(${
                   stats.total > 0
                     ? Math.round((stats.overdue / stats.total) * 100)
+                    : 0
+                }%)`}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8} md={6}>
+            <Card
+              className="text-center"
+              style={{ backgroundColor: "#fff7e6", borderColor: "#ffd591" }}
+            >
+              <Statistic
+                title="Chờ duyệt"
+                value={stats.waiting_for_approval}
+                valueStyle={{ color: "#fa8c16" }}
+                suffix={`(${
+                  stats.total > 0
+                    ? Math.round((stats.waiting_for_approval / stats.total) * 100)
                     : 0
                 }%)`}
               />

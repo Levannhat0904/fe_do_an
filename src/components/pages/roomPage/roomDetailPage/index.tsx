@@ -775,6 +775,7 @@ const RoomDetailPage = () => {
       pending: "Chờ thanh toán",
       paid: "Đã thanh toán",
       overdue: "Quá hạn",
+      waiting_for_approval: "Chờ duyệt",
     };
 
     return `
@@ -852,6 +853,10 @@ const RoomDetailPage = () => {
           .status-overdue {
             background-color: #fff1f0;
             color: #f5222d;
+          }
+          .status-waiting_for_approval {
+            background-color: #fff7e6;
+            color: #fa8c16;
           }
           @media print {
             body {
