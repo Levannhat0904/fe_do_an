@@ -33,6 +33,7 @@ export const SPACE_SIZE_DEFAULT = 17;
 
 export const LOGO_URL = "/images/logo_utt.png";
 
+
 export const LOGO_SIDEBAR_URL = "/images/logo_utt.png";
 
 export const ICON_SIZE_SMALL = 16;
