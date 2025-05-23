@@ -111,6 +111,7 @@ const BillPage: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
+  const [selectValues, setSelectValues] = useState<{ [key: number]: undefined }>({});
   const [form] = Form.useForm();
 
   // Fetch data on component mount
@@ -881,67 +882,70 @@ const BillPage: React.FC = () => {
     {
       title: "Thao tác",
       key: "action",
-      render: (_: unknown, record: Invoice) => (
-        <Space size="small">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              icon={<EyeOutlined />}
-              onClick={() => showDetailModal(record)}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              icon={<EditOutlined />}
-              onClick={() => showEditModal(record)}
-              size="small"
-              type="default"
-            />
-          </Tooltip>
-          <Tooltip title="In hóa đơn">
-            <Button
-              icon={<PrinterOutlined />}
-              onClick={() => handlePrint(record)}
-              size="small"
-              type="default"
-            />
-          </Tooltip>
-          {record.paymentStatus === "pending" && (
-            <Tooltip title="Đánh dấu đã thanh toán">
-              <Button
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleUpdateStatus(record.id, "paid")}
-                type="primary"
-                size="small"
-              />
-            </Tooltip>
-          )}
-          {record.paymentStatus === "pending" && (
-            <Tooltip title="Đánh dấu quá hạn">
-              <Button
-                icon={<ExclamationCircleOutlined />}
-                onClick={() => handleUpdateStatus(record.id, "overdue")}
-                type="primary"
-                danger
-                size="small"
-              />
-            </Tooltip>
-          )}
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa hóa đơn này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
+      render: (_: unknown, record: Invoice) => {
+        const handleActionChange = (value: string) => {
+          switch (value) {
+            case 'view':
+              showDetailModal(record);
+              break;
+            case 'edit':
+              showEditModal(record);
+              break;
+            case 'print':
+              handlePrint(record);
+              break;
+            case 'paid':
+              handleUpdateStatus(record.id, "paid");
+              break;
+            case 'overdue':
+              handleUpdateStatus(record.id, "overdue");
+              break;
+            case 'delete':
+              Modal.confirm({
+                title: "Xác nhận xóa",
+                content: "Bạn có chắc chắn muốn xóa hóa đơn này?",
+                okText: "Có",
+                cancelText: "Không",
+                okType: "danger",
+                onOk: () => handleDelete(record.id),
+              });
+              break;
+            default:
+              break;
+          }
+          // Clear select after action
+        };
+
+        return (
+          <Select
+            placeholder="Thao tác"
+            size="small"
+            style={{ width: 120 }}
+            onChange={handleActionChange}
+            value={selectValues[record.id] || undefined}
+            allowClear
           >
-            <Button
-              icon={<DeleteOutlined />}
-              type="primary"
-              danger
-              size="small"
-            />
-          </Popconfirm>
-        </Space>
-      ),
+            <Option value="view">
+              <EyeOutlined /> Xem
+            </Option>
+            <Option value="edit">
+              <EditOutlined /> Sửa
+            </Option>
+            <Option value="print">
+              <PrinterOutlined /> In
+            </Option>
+            <Option value="paid">
+              <CheckCircleOutlined /> Đã TT
+            </Option>
+            <Option value="overdue">
+              <ExclamationCircleOutlined /> Quá hạn
+            </Option>
+            <Option value="delete">
+              <DeleteOutlined /> Xóa
+            </Option>
+          </Select>
+        );
+      },
     },
   ];
 

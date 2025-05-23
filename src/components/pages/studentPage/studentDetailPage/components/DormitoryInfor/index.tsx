@@ -101,12 +101,12 @@ const DormitoryInfo = (props: Iprops) => {
             {dormitory.bedNumber}
           </Descriptions.Item>
           <Descriptions.Item label="Phí hàng tháng">
-            {dormitory.monthlyFee?.toLocaleString("vi-VN")} đồng
+            {Number(dormitory.monthlyFee).toLocaleString("vi-VN")} đồng
           </Descriptions.Item>
           <Descriptions.Item label="Tiền đặt cọc">
-            {dormitory.depositAmount?.toLocaleString("vi-VN")} đồng
+            {Number(dormitory.depositAmount).toLocaleString("vi-VN")} đồng
           </Descriptions.Item>
-          <Descriptions.Item label="Ngày check-in">
+          {/* <Descriptions.Item label="Ngày check-in">
             {dormitory.checkInDate
               ? dayjs(dormitory.checkInDate).format("DD/MM/YYYY")
               : "Chưa check-in"}
@@ -115,7 +115,7 @@ const DormitoryInfo = (props: Iprops) => {
             {dormitory.checkOutDate
               ? dayjs(dormitory.checkOutDate).format("DD/MM/YYYY")
               : "Chưa check-out"}
-          </Descriptions.Item>
+          </Descriptions.Item> */}
         </Descriptions>
       </Card>
     </div>

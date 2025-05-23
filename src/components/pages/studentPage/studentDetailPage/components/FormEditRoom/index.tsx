@@ -153,13 +153,6 @@ const FormEditRoom = (props: IProps) => {
           onChange={handleRoomChange}
         />
       </Form.Item>
-      <Form.Item name="bedNumber" label="Số giường">
-        <Select
-          placeholder="Chọn giường"
-          disabled={!form.getFieldValue("roomId")}
-          options={generateBedOptions()}
-        />
-      </Form.Item>
       <Form.Item name="semester" label="Học kỳ">
         <Select placeholder="Chọn học kỳ">
           <Select.Option value="1">Học kỳ 1</Select.Option>

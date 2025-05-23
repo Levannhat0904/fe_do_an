@@ -450,7 +450,7 @@ const ContractPage: React.FC = () => {
       dataIndex: "monthlyFee",
       key: "monthlyFee",
       render: (fee: number) =>
-        fee ? `${fee.toLocaleString("vi-VN")} VNĐ` : "",
+        fee ? `${Number(fee).toLocaleString("vi-VN")} VNĐ` : "",
       sorter: (a: Contract, b: Contract) => a.monthlyFee - b.monthlyFee,
     },
     {
@@ -762,10 +762,10 @@ const ContractPage: React.FC = () => {
                 {detailContract.endDate}
               </Descriptions.Item>
               <Descriptions.Item label="Tiền đặt cọc">
-                {detailContract.depositAmount?.toLocaleString("vi-VN")} VNĐ
+                {Number(detailContract.depositAmount).toLocaleString("vi-VN")} VNĐ
               </Descriptions.Item>
               <Descriptions.Item label="Phí hàng tháng">
-                {detailContract.monthlyFee?.toLocaleString("vi-VN")} VNĐ
+                {Number(detailContract.monthlyFee).toLocaleString("vi-VN")} VNĐ
               </Descriptions.Item>
             </Descriptions>
 

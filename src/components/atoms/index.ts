@@ -15,6 +15,11 @@ export { default as KProgress } from "./KProgress";
 export { default as KBreadcrumb } from "./KBreadcrumb";
 export { default as KRadioGroupButton } from "./KRadioGroupButton";
 export { default as KTabs } from "./KTabs";
-export { default as KSuffixSelect } from "./KuffixSelect"
-export { default as KSwitch } from "./KSwitch"
-export { default as KTag } from "./KTag"
+export { default as KSuffixSelect } from "./KSuffixSelect";
+export { default as KSwitch } from "./KSwitch";
+export { default as KTag } from "./KTag";
+export { default as StatusTag } from './StatusTag';
+export { default as LoadingSpinner } from './LoadingSpinner';
+export { default as FormattedCurrency } from './FormattedCurrency';
+export { default as FormattedDate } from './FormattedDate';
+export { default as ActionButton } from './ActionButton';
