@@ -1,3 +1,4 @@
+"use client";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { colors } from "@/constants";
 interface PaginationControlsProps {

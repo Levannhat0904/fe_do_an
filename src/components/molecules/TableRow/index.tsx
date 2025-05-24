@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { DotsThreeCircleVertical, Eye } from "@phosphor-icons/react";
 import { ICON_SIZE_DEFAULT, StatusEnum } from "@/constants";

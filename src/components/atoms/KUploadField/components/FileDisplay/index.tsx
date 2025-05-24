@@ -1,3 +1,4 @@
+"use client";
 import { Image } from "antd";
 import { FC } from "react";
 import styles from "./styles.module.scss";
