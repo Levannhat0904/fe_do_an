@@ -285,6 +285,7 @@ const StudentDormitoryDetail = () => {
               </p>
             </div>
           </div>
+          
           <div className="flex flex-col items-end">
             <div className="text-lg mb-2 flex items-center">
               <span className="mr-2">Trạng thái:</span>
