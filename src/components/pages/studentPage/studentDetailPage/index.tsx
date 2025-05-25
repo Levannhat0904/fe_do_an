@@ -264,7 +264,7 @@ const StudentDormitoryDetail = () => {
         <div className="flex md:flex-row flex-col justify-between items-center mb-6">
           <div className="flex items-center">
             <div className="bg-blue-50 rounded-full mr-4">
-              <div className="w-16 h-16">
+              <div className="w-16 h-16 flex items-center justify-center">
                 {student?.avatarPath ? (
                   <Image
                     src={`${student?.avatarPath ?? LOGO_URL}`}

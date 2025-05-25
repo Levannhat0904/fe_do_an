@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Tabs,
   Table,
@@ -7,15 +7,14 @@ import {
   Tag,
   Badge,
   Empty,
-  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
   CheckCircleOutlined,
   EditOutlined,
-  EyeOutlined,
 } from "@ant-design/icons";
-import { formatDate, formatCurrency } from "../../utils";
+import { formatDate } from "../../utils";
+import MaintenanceDetailModal from "./MaintenanceDetailModal";
 
 interface MaintenanceTabProps {
   maintenanceHistory: any[];
@@ -32,6 +31,19 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({
   onProcessRequest,
   onViewMaintenance,
 }) => {
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const handleViewDetail = (record: any) => {
+    setSelectedRequest(record);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setSelectedRequest(null);
+    setIsDetailModalOpen(false);
+  };
+
   const maintenanceColumns = [
     {
       title: "Ngày",
@@ -65,7 +77,7 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({
       title: "Chi phí",
       dataIndex: "cost",
       key: "cost",
-      render: (cost: number) => formatCurrency(cost),
+      render: (cost: number) => cost?.toLocaleString("vi-VN") + " đ",
     },
     {
       title: "Nhân viên",
@@ -93,10 +105,12 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({
       render: (_: unknown, record: any) => (
         <Space size="small" className="flex justify-end">
           <Button
-            icon={<EyeOutlined />}
             size="small"
-            onClick={() => onViewMaintenance(record.id)}
-          />
+            icon={<EditOutlined />}
+            onClick={() => handleViewDetail(record)}
+          >
+            Chi tiết
+          </Button>
         </Space>
       ),
     },
@@ -193,7 +207,11 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({
               Hoàn thành
             </Button>
           )}
-          <Button size="small" icon={<EditOutlined />}>
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleViewDetail(record)}
+          >
             Chi tiết
           </Button>
         </Space>
@@ -202,62 +220,70 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({
   ];
 
   return (
-    <Tabs defaultActiveKey="pending" style={{ marginBottom: "16px" }}>
-      <Tabs.TabPane tab="Yêu cầu chờ xử lý" key="pending">
-        <div
-          style={{
-            marginBottom: "16px",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={onAddMaintenance}
+    <>
+      <Tabs defaultActiveKey="pending" style={{ marginBottom: "16px" }}>
+        <Tabs.TabPane tab="Yêu cầu chờ xử lý" key="pending">
+          <div
+            style={{
+              marginBottom: "16px",
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
           >
-            Thêm yêu cầu mới
-          </Button>
-        </div>
-        {pendingRequests && pendingRequests.length > 0 ? (
-          <Table
-            columns={requestColumns}
-            dataSource={pendingRequests}
-            rowKey="id"
-            pagination={false}
-          />
-        ) : (
-          <Empty description="Không có yêu cầu bảo trì nào đang chờ xử lý" />
-        )}
-      </Tabs.TabPane>
-      <Tabs.TabPane tab="Lịch sử bảo trì" key="history">
-        <div
-          style={{
-            marginBottom: "16px",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={onAddMaintenance}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={onAddMaintenance}
+            >
+              Thêm yêu cầu mới
+            </Button>
+          </div>
+          {pendingRequests && pendingRequests.length > 0 ? (
+            <Table
+              columns={requestColumns}
+              dataSource={pendingRequests}
+              rowKey="id"
+              pagination={false}
+            />
+          ) : (
+            <Empty description="Không có yêu cầu bảo trì nào đang chờ xử lý" />
+          )}
+        </Tabs.TabPane>
+        <Tabs.TabPane tab="Lịch sử bảo trì" key="history">
+          <div
+            style={{
+              marginBottom: "16px",
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
           >
-            Thêm lịch sử bảo trì
-          </Button>
-        </div>
-        {maintenanceHistory && maintenanceHistory.length > 0 ? (
-          <Table
-            columns={maintenanceColumns}
-            dataSource={maintenanceHistory}
-            rowKey="id"
-            pagination={false}
-          />
-        ) : (
-          <Empty description="Không có lịch sử bảo trì" />
-        )}
-      </Tabs.TabPane>
-    </Tabs>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={onAddMaintenance}
+            >
+              Thêm lịch sử bảo trì
+            </Button>
+          </div>
+          {maintenanceHistory && maintenanceHistory.length > 0 ? (
+            <Table
+              columns={maintenanceColumns}
+              dataSource={maintenanceHistory}
+              rowKey="id"
+              pagination={false}
+            />
+          ) : (
+            <Empty description="Không có lịch sử bảo trì" />
+          )}
+        </Tabs.TabPane>
+      </Tabs>
+
+      <MaintenanceDetailModal
+        request={selectedRequest}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+      />
+    </>
   );
 };
 
