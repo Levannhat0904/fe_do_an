@@ -308,7 +308,7 @@ const LookUpBillPage = () => {
   // Format currency
   const formatCurrency = (amount: number | undefined) => {
     if (amount === undefined) return "0 VNĐ";
-    return `${amount.toLocaleString("vi-VN")} VNĐ`;
+    return `${Number(amount)?.toLocaleString("vi-VN")} VNĐ`;
   };
 
   // Generate invoice HTML for printing
@@ -590,7 +590,8 @@ const LookUpBillPage = () => {
       title: "Tổng tiền",
       dataIndex: "totalAmount",
       key: "totalAmount",
-      render: (amount: number) => `${amount.toLocaleString("vi-VN")} VNĐ`,
+      render: (amount: number) =>
+        `${Number(amount)?.toLocaleString("vi-VN")} VNĐ`,
       sorter: (a: Invoice, b: Invoice) => a.totalAmount - b.totalAmount,
     },
     {

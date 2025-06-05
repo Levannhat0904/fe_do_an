@@ -432,7 +432,7 @@ const DormitoryRoomManagement = () => {
       key: "pricePerMonth",
       width: 120,
       sorter: (a: Room, b: Room) => a.pricePerMonth - b.pricePerMonth,
-      render: (fee: number) => `${fee.toLocaleString("vi-VN")} đ`,
+      render: (fee: number) => `${Number(fee)?.toLocaleString("vi-VN")} đ`,
     },
     {
       title: "Trạng thái",
@@ -567,7 +567,7 @@ const DormitoryRoomManagement = () => {
                   {room.roomType === "male" ? "Nam" : "Nữ"}
                 </Tag>
                 <div className="font-semibold">
-                  {room.pricePerMonth.toLocaleString("vi-VN")} đ/tháng
+                  {Number(room.pricePerMonth)?.toLocaleString("vi-VN")} đ/tháng
                 </div>
               </div>
             </div>

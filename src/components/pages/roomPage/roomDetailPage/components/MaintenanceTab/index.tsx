@@ -1,14 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import {
-  Tabs,
-  Table,
-  Button,
-  Space,
-  Tag,
-  Badge,
-  Empty,
-} from "antd";
+import { Tabs, Table, Button, Space, Tag, Badge, Empty } from "antd";
 import {
   PlusOutlined,
   CheckCircleOutlined,
@@ -78,7 +70,7 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({
       title: "Chi phí",
       dataIndex: "cost",
       key: "cost",
-      render: (cost: number) => cost?.toLocaleString("vi-VN") + " đ",
+      render: (cost: number) => Number(cost)?.toLocaleString("vi-VN") + " đ",
     },
     {
       title: "Nhân viên",
@@ -288,4 +280,4 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({
   );
 };
 
-export default MaintenanceTab; 
+export default MaintenanceTab;

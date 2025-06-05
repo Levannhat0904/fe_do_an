@@ -16,7 +16,7 @@ import { phoneRegex } from "@/constants";
 import dayjs from "dayjs";
 import { RcFile } from "antd/es/upload";
 
-type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
+type FileType = Parameters<GetProp<UploadProps, "beforeUpload">>[0];
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -33,9 +33,10 @@ export function setAuthCookies(data: {
     profile: {
       role: string;
     };
-  }
+  };
 }) {
-  const path = data.user?.profile?.role !== UserType.student ? DEFAULT_PATH : "/sinh-vien";
+  const path =
+    data.user?.profile?.role !== UserType.student ? DEFAULT_PATH : "/sinh-vien";
   setCookie(KTX_ADMIN_ACCESS_TOKEN, data.accessToken, {
     path: DEFAULT_PATH,
   });
@@ -55,10 +56,12 @@ export const getDefaultRules = (message: string, whitespace = true) => {
   };
 };
 export const formatAmount = (amount?: number): string => {
-  return `${(amount?.toLocaleString() || "0")} đ`;
+  return `${Number(amount)?.toLocaleString() || "0"} đ`;
 };
 export async function executeRequest<T>(
-  requestFunc: () => Promise<T>, form?: FormInstance, name?: string
+  requestFunc: () => Promise<T>,
+  form?: FormInstance,
+  name?: string
 ) {
   try {
     const response = await requestFunc();
@@ -120,7 +123,7 @@ export const findValueOptions = (
 };
 
 export const formatContentInformationData = (
-  labels: Array<{ key: string; label: string;[key: string]: any }>,
+  labels: Array<{ key: string; label: string; [key: string]: any }>,
   information: Record<string, any> | null,
   extraProps?: (item: any) => Partial<any>
 ) => {
@@ -134,10 +137,9 @@ export const formatContentInformationData = (
     .filter((item) => item.value !== null);
 };
 
-
 export const getBase64 = (img: FileType, callback: (url: string) => void) => {
   const reader = new FileReader();
-  reader.addEventListener('load', () => callback(reader.result as string));
+  reader.addEventListener("load", () => callback(reader.result as string));
   reader.readAsDataURL(img);
 };
 
@@ -156,13 +158,18 @@ export const fileToBase64 = (file: RcFile): Promise<string | null> => {
     reader.readAsDataURL(file);
   });
 };
-export const getOptions = (data: any, value: string, name: string, imageUrl?: string) => {
+export const getOptions = (
+  data: any,
+  value: string,
+  name: string,
+  imageUrl?: string
+) => {
   const options = data?.map((record: any) => {
     return {
       value: record?.[value],
       label: record?.[name],
       imageUrl: imageUrl ? record?.[imageUrl] : undefined,
-    }
+    };
   });
 
   return options;
@@ -179,15 +186,19 @@ export const formatDate = (
   return dayjs(new Date(Number(date))).format(format);
 };
 
-
-
-export const findOptionLabel = (options: TOption[], value?: string | number) => {
+export const findOptionLabel = (
+  options: TOption[],
+  value?: string | number
+) => {
   if (!options || options.length === 0 || !value) {
     return DEFAULT_EMPTY_STRING;
   }
 
-  return options.find(option => option.value === value)?.label || DEFAULT_EMPTY_STRING;
-}
+  return (
+    options.find((option) => option.value === value)?.label ||
+    DEFAULT_EMPTY_STRING
+  );
+};
 
 export const formatCurrency = (amount = 0, shortSymbol = true) => {
   return new Intl.NumberFormat("vi-VN", {
@@ -199,11 +210,9 @@ export const formatCurrency = (amount = 0, shortSymbol = true) => {
     .replaceAll(shortSymbol ? "₫" : "", shortSymbol ? "đ" : "");
 };
 
-
 export const generateRandomSixDigits = () => {
   return Math.floor(100000 + Math.random() * 900000);
 };
 export const getIsPhoneNumberValidated = (phoneNumber: string) => {
   return phoneRegex.test(phoneNumber || "");
-}
-
+};

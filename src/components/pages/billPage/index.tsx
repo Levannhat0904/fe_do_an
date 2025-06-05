@@ -111,7 +111,9 @@ const BillPage: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
-  const [selectValues, setSelectValues] = useState<{ [key: number]: undefined }>({});
+  const [selectValues, setSelectValues] = useState<{
+    [key: number]: undefined;
+  }>({});
   const [form] = Form.useForm();
 
   // Fetch data on component mount
@@ -677,36 +679,36 @@ const BillPage: React.FC = () => {
               <tr>
                 <td>Tiền phòng</td>
                 <td></td>
-                <td style="text-align: right;">${invoice.roomFee?.toLocaleString(
-                  "vi-VN"
-                )} VNĐ</td>
+                <td style="text-align: right;">${Number(
+                  invoice.roomFee
+                )?.toLocaleString("vi-VN")} VNĐ</td>
               </tr>
               <tr>
                 <td>Tiền điện</td>
                 <td>${invoice.electricity} kWh x 2,000 VNĐ</td>
-                <td style="text-align: right;">${invoice.electricFee?.toLocaleString(
-                  "vi-VN"
-                )} VNĐ</td>
+                <td style="text-align: right;">${Number(
+                  invoice.electricFee
+                )?.toLocaleString("vi-VN")} VNĐ</td>
               </tr>
               <tr>
                 <td>Tiền nước</td>
                 <td>${invoice.water} m³ x 10,000 VNĐ</td>
-                <td style="text-align: right;">${invoice.waterFee?.toLocaleString(
-                  "vi-VN"
-                )} VNĐ</td>
+                <td style="text-align: right;">${Number(
+                  invoice.waterFee
+                )?.toLocaleString("vi-VN")} VNĐ</td>
               </tr>
               <tr>
                 <td>Phí dịch vụ</td>
                 <td></td>
-                <td style="text-align: right;">${invoice.serviceFee?.toLocaleString(
-                  "vi-VN"
-                )} VNĐ</td>
+                <td style="text-align: right;">${Number(
+                  invoice.serviceFee
+                )?.toLocaleString("vi-VN")} VNĐ</td>
               </tr>
             </tbody>
           </table>
           
           <div class="invoice-total">
-            <p><strong>Tổng cộng: ${invoice.totalAmount?.toLocaleString(
+            <p><strong>Tổng cộng: ${Number(invoice.totalAmount)?.toLocaleString(
               "vi-VN"
             )} VNĐ</strong></p>
           </div>
@@ -805,7 +807,9 @@ const BillPage: React.FC = () => {
       paid: invoices.filter((inv) => inv.paymentStatus === "paid").length,
       pending: invoices.filter((inv) => inv.paymentStatus === "pending").length,
       overdue: invoices.filter((inv) => inv.paymentStatus === "overdue").length,
-      waiting_for_approval: invoices.filter((inv) => inv.paymentStatus === "waiting_for_approval").length,
+      waiting_for_approval: invoices.filter(
+        (inv) => inv.paymentStatus === "waiting_for_approval"
+      ).length,
     };
 
     return stats;
@@ -866,7 +870,8 @@ const BillPage: React.FC = () => {
       title: "Tổng tiền",
       dataIndex: "totalAmount",
       key: "totalAmount",
-      render: (amount: number) => `${amount.toLocaleString("vi-VN")} VNĐ`,
+      render: (amount: number) =>
+        `${Number(amount)?.toLocaleString("vi-VN")} VNĐ`,
       sorter: (a: Invoice, b: Invoice) => a.totalAmount - b.totalAmount,
     },
     {
@@ -885,22 +890,22 @@ const BillPage: React.FC = () => {
       render: (_: unknown, record: Invoice) => {
         const handleActionChange = (value: string) => {
           switch (value) {
-            case 'view':
+            case "view":
               showDetailModal(record);
               break;
-            case 'edit':
+            case "edit":
               showEditModal(record);
               break;
-            case 'print':
+            case "print":
               handlePrint(record);
               break;
-            case 'paid':
+            case "paid":
               handleUpdateStatus(record.id, "paid");
               break;
-            case 'overdue':
+            case "overdue":
               handleUpdateStatus(record.id, "overdue");
               break;
-            case 'delete':
+            case "delete":
               Modal.confirm({
                 title: "Xác nhận xóa",
                 content: "Bạn có chắc chắn muốn xóa hóa đơn này?",
@@ -1026,7 +1031,9 @@ const BillPage: React.FC = () => {
                 valueStyle={{ color: "#fa8c16" }}
                 suffix={`(${
                   stats.total > 0
-                    ? Math.round((stats.waiting_for_approval / stats.total) * 100)
+                    ? Math.round(
+                        (stats.waiting_for_approval / stats.total) * 100
+                      )
                     : 0
                 }%)`}
               />
@@ -1305,22 +1312,25 @@ const BillPage: React.FC = () => {
             <Divider orientation="left">Chi tiết hóa đơn</Divider>
             <Descriptions bordered size="small" column={1}>
               <Descriptions.Item label="Tiền phòng">
-                {selectedInvoice.roomFee.toLocaleString("vi-VN")} VNĐ
+                {Number(selectedInvoice.roomFee)?.toLocaleString("vi-VN")} VNĐ
               </Descriptions.Item>
               <Descriptions.Item label="Tiền điện">
                 {selectedInvoice.electricity} kWh x 2,000 VNĐ ={" "}
-                {selectedInvoice.electricFee.toLocaleString("vi-VN")} VNĐ
+                {Number(selectedInvoice.electricFee)?.toLocaleString("vi-VN")}{" "}
+                VNĐ
               </Descriptions.Item>
               <Descriptions.Item label="Tiền nước">
                 {selectedInvoice.water} m³ x 10,000 VNĐ ={" "}
-                {selectedInvoice.waterFee.toLocaleString("vi-VN")} VNĐ
+                {Number(selectedInvoice.waterFee)?.toLocaleString("vi-VN")} VNĐ
               </Descriptions.Item>
               <Descriptions.Item label="Phí dịch vụ">
-                {selectedInvoice.serviceFee.toLocaleString("vi-VN")} VNĐ
+                {Number(selectedInvoice.serviceFee)?.toLocaleString("vi-VN")}{" "}
+                VNĐ
               </Descriptions.Item>
               <Descriptions.Item label="Tổng cộng">
                 <Text strong>
-                  {selectedInvoice.totalAmount.toLocaleString("vi-VN")} VNĐ
+                  {Number(selectedInvoice.totalAmount)?.toLocaleString("vi-VN")}{" "}
+                  VNĐ
                 </Text>
               </Descriptions.Item>
             </Descriptions>
