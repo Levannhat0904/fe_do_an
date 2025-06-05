@@ -35,6 +35,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { formatCurrency } from "@/utils/formatters";
 
 // Configure dayjs
 dayjs.extend(localizedFormat);
@@ -74,6 +75,8 @@ interface Student {
   id: number;
   fullName: string;
   studentCode: string;
+  gender: string;
+  hasActiveContract?: boolean;
 }
 
 interface Room {
@@ -84,6 +87,8 @@ interface Room {
   capacity: number;
   currentOccupancy: number;
   status: "available" | "full" | "maintenance";
+  roomType: string;
+  pricePerMonth: number;
 }
 
 // Utility function to parse dates safely
@@ -134,14 +139,77 @@ const ContractPage: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
-  console.log(rooms);
+  const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
+  const [depositAmountFormatted, setDepositAmountFormatted] =
+    useState<string>("");
+  const [monthlyFeeFormatted, setMonthlyFeeFormatted] = useState<string>("");
 
   // Fetch contracts, students, rooms data
   useEffect(() => {
     fetchContracts();
-    fetchStudents();
-    fetchRooms();
   }, []);
+
+  // Cập nhật danh sách sinh viên và phòng sau khi có dữ liệu hợp đồng
+  useEffect(() => {
+    if (!loading) {
+      fetchStudents();
+      fetchRooms();
+    }
+  }, [loading, contracts]);
+
+  // Lọc phòng theo giới tính của sinh viên đã chọn
+  const getFilteredRooms = (studentId: number) => {
+    if (!studentId) return [];
+
+    const selectedStudent = students.find(
+      (student) => student.id === studentId
+    );
+    if (!selectedStudent) return [];
+
+    // Tìm thông tin chi tiết về sinh viên để lấy giới tính
+    return rooms.filter((room) => {
+      // Lọc phòng còn trống
+      const isAvailable =
+        room.status !== "full" && room.status !== "maintenance";
+
+      // Lọc theo giới tính sinh viên - phòng
+      const matchesGender = selectedStudent.gender === room.roomType;
+
+      return isAvailable && matchesGender;
+    });
+  };
+
+  // Lắng nghe thay đổi của studentId trong form
+  const handleStudentChange = (studentId: number) => {
+    const filtered = getFilteredRooms(studentId);
+    setFilteredRooms(filtered);
+
+    // Reset giá trị roomId nếu không có trong danh sách phòng lọc
+    form.setFieldValue("roomId", undefined);
+
+    // Reset các giá trị liên quan đến phòng
+    form.setFieldValue("depositAmount", undefined);
+    form.setFieldValue("monthlyFee", undefined);
+  };
+
+  // Cập nhật giá tiền khi chọn phòng
+  const handleRoomChange = (roomId: number) => {
+    const selectedRoom = rooms.find((room) => room.id === roomId);
+    if (selectedRoom) {
+      // Đặt tiền đặt cọc mặc định là giá phòng
+      form.setFieldValue("depositAmount", Number(selectedRoom.pricePerMonth));
+      // Đặt tiền hàng tháng mặc định là giá phòng hàng tháng
+      form.setFieldValue("monthlyFee", Number(selectedRoom.pricePerMonth));
+
+      // Cập nhật giá trị hiển thị
+      setDepositAmountFormatted(
+        formatCurrency(Number(selectedRoom.pricePerMonth))
+      );
+      setMonthlyFeeFormatted(
+        formatCurrency(Number(selectedRoom.pricePerMonth))
+      );
+    }
+  };
 
   const fetchContracts = async () => {
     try {
@@ -224,7 +292,26 @@ const ContractPage: React.FC = () => {
       const response = await axiosClient.get("/api/student");
       const data = await response.data;
       if (data) {
-        setStudents(data.data);
+        // Lấy danh sách tất cả các sinh viên
+        const allStudents = data.data;
+
+        // Lấy danh sách sinh viên đã có hợp đồng đang active
+        const studentsWithActiveContract = contracts
+          .filter((contract) => contract.status === "active")
+          .map((contract) => contract.studentId);
+
+        console.log(
+          "Sinh viên có hợp đồng active:",
+          studentsWithActiveContract
+        );
+
+        // Đánh dấu sinh viên đã có hợp đồng active
+        const availableStudents = allStudents.map((student: Student) => ({
+          ...student,
+          hasActiveContract: studentsWithActiveContract.includes(student.id),
+        }));
+
+        setStudents(availableStudents);
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -277,7 +364,6 @@ const ContractPage: React.FC = () => {
     setEditingContract(contract);
 
     if (contract) {
-      // Set form values for editing
       form.setFieldsValue({
         studentId: contract.studentId,
         roomId: contract.roomId,
@@ -285,17 +371,69 @@ const ContractPage: React.FC = () => {
           parseDateString(contract.startDate),
           parseDateString(contract.endDate),
         ],
-        depositAmount: contract.depositAmount,
-        monthlyFee: contract.monthlyFee,
+        depositAmount: Number(contract.depositAmount),
+        monthlyFee: Number(contract.monthlyFee),
         status: contract.status,
       });
+
+      // Cập nhật hiển thị giá trị tiền
+      setDepositAmountFormatted(formatCurrency(Number(contract.depositAmount)));
+      setMonthlyFeeFormatted(formatCurrency(Number(contract.monthlyFee)));
+
+      // Lọc phòng theo giới tính khi chỉnh sửa
+      handleStudentChange(contract.studentId);
+
+      // Log ra giá trị form để debug
+      setTimeout(() => {
+        console.log("Form values after set:", form.getFieldsValue());
+      }, 100);
     } else {
       // Reset form for new contract
       form.resetFields();
+      setFilteredRooms([]);
+      setDepositAmountFormatted("");
+      setMonthlyFeeFormatted("");
     }
 
     setIsModalVisible(true);
   };
+
+  // Đảm bảo form được cập nhật khi modal hiển thị
+  useEffect(() => {
+    if (isModalVisible && editingContract) {
+      // Cập nhật lại form values sau khi modal hiển thị
+      form.setFieldsValue({
+        studentId: editingContract.studentId,
+        roomId: editingContract.roomId,
+        dateRange: [
+          parseDateString(editingContract.startDate),
+          parseDateString(editingContract.endDate),
+        ],
+        depositAmount: Number(editingContract.depositAmount),
+        monthlyFee: Number(editingContract.monthlyFee),
+        status: editingContract.status,
+      });
+
+      // Cập nhật giá trị tiền
+      setDepositAmountFormatted(formatCurrency(editingContract.depositAmount));
+      setMonthlyFeeFormatted(formatCurrency(editingContract.monthlyFee));
+    }
+  }, [isModalVisible, editingContract]);
+
+  // Cập nhật hiển thị tiền khi form thay đổi
+  useEffect(() => {
+    // Cập nhật định dạng tiền khi form thay đổi
+    const updateFormattedValues = () => {
+      const depositAmount = form.getFieldValue("depositAmount");
+      const monthlyFee = form.getFieldValue("monthlyFee");
+
+      setDepositAmountFormatted(formatCurrency(Number(depositAmount)));
+      setMonthlyFeeFormatted(formatCurrency(Number(monthlyFee)));
+    };
+
+    // Gọi ngay lần đầu
+    updateFormattedValues();
+  }, [form]);
 
   const showDetailModal = (contractId: number) => {
     fetchContractDetail(contractId);
@@ -614,31 +752,49 @@ const ContractPage: React.FC = () => {
                   placeholder="Chọn sinh viên"
                   showSearch
                   optionFilterProp="children"
+                  onChange={handleStudentChange}
+                  disabled={!!editingContract}
                 >
-                  {students.map((student) => (
-                    <Option key={student.id} value={student.id}>
-                      {student.fullName} ({student.studentCode})
-                    </Option>
-                  ))}
+                  {students
+                    .filter(
+                      (student) =>
+                        // Nếu đang chỉnh sửa, hiển thị sinh viên hiện tại
+                        // Nếu thêm mới, chỉ hiển thị sinh viên chưa có hợp đồng active
+                        !student.hasActiveContract ||
+                        (editingContract &&
+                          student.id === editingContract.studentId)
+                    )
+                    .map((student) => (
+                      <Option key={student.id} value={student.id}>
+                        {student.fullName} ({student.studentCode})
+                        {student.hasActiveContract && (
+                          <Tag color="orange" style={{ marginLeft: 8 }}>
+                            Đã có hợp đồng
+                          </Tag>
+                        )}
+                      </Option>
+                    ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="roomId"
-                label="Phòng (Chỉ hiển thị phòng còn trống)"
+                label="Phòng (Phù hợp với giới tính sinh viên)"
                 rules={[{ required: true, message: "Vui lòng chọn phòng" }]}
               >
                 <Select
                   placeholder="Chọn phòng"
                   showSearch
                   optionFilterProp="children"
+                  onChange={handleRoomChange}
                 >
-                  {availableRooms.map((room) => (
+                  {filteredRooms.map((room) => (
                     <Option key={room.id} value={room.id}>
                       {room.roomNumber} (Tầng {room.floorNumber}, Tòa{" "}
-                      {room.buildingName}) -{room.currentOccupancy}/
-                      {room.capacity} chỗ
+                      {room.buildingName}) - {room.currentOccupancy}/
+                      {room.capacity} chỗ (
+                      {room.roomType === "male" ? "Nam" : "Nữ"})
                     </Option>
                   ))}
                 </Select>
@@ -658,7 +814,6 @@ const ContractPage: React.FC = () => {
                   format={DATE_FORMAT}
                   placeholder={["Ngày bắt đầu", "Ngày kết thúc"]}
                   allowClear={false}
-                  showToday
                   disabledDate={(current) => {
                     // Can't select days in the past
                     return current && current < dayjs().startOf("day");
@@ -677,7 +832,11 @@ const ContractPage: React.FC = () => {
                   { required: true, message: "Vui lòng nhập số tiền đặt cọc" },
                 ]}
               >
-                <Input type="number" placeholder="Nhập số tiền đặt cọc" />
+                <Input
+                  type="number"
+                  placeholder="Nhập số tiền đặt cọc"
+                  className="bg-gray-100"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -688,7 +847,12 @@ const ContractPage: React.FC = () => {
                   { required: true, message: "Vui lòng nhập phí hàng tháng" },
                 ]}
               >
-                <Input type="number" placeholder="Nhập phí hàng tháng" />
+                <Input
+                  type="number"
+                  placeholder="Nhập phí hàng tháng"
+                  disabled={true}
+                  className="bg-gray-100"
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -762,7 +926,8 @@ const ContractPage: React.FC = () => {
                 {detailContract.endDate}
               </Descriptions.Item>
               <Descriptions.Item label="Tiền đặt cọc">
-                {Number(detailContract.depositAmount).toLocaleString("vi-VN")} VNĐ
+                {Number(detailContract.depositAmount).toLocaleString("vi-VN")}{" "}
+                VNĐ
               </Descriptions.Item>
               <Descriptions.Item label="Phí hàng tháng">
                 {Number(detailContract.monthlyFee).toLocaleString("vi-VN")} VNĐ
