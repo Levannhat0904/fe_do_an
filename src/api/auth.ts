@@ -1,12 +1,12 @@
-import axios from 'axios';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { message } from 'antd';
-import axiosClient from './axiosClient';
-import { KTX_ADMIN_ACCESS_TOKEN } from '@/constants';
-import { getCookie } from 'cookies-next';
-import { setAuthCookies } from '@/utils';
-import { AdminProfile } from '@/types/student';
-const API_URL = 'http://localhost:3000/api';
+import axios from "axios";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { message } from "antd";
+import axiosClient from "./axiosClient";
+import { KTX_ADMIN_ACCESS_TOKEN } from "@/constants";
+import { getCookie } from "cookies-next";
+import { setAuthCookies } from "@/utils";
+import { AdminProfile } from "@/types/student";
+const API_URL = "http://localhost:3000/api";
 
 interface LoginCredentials {
   email: string;
@@ -73,17 +73,17 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: authApi.login,
     onSuccess: (data) => {
-      message.success('Đăng nhập thành công');
+      message.success("Đăng nhập thành công");
       return data;
     },
     onError: (error) => {
-      message.error('Đăng nhập thất bại');
+      message.error("Đăng nhập thất bại");
     },
   });
 };
 export const useCurrentSession = () => {
   return useQuery({
-    queryKey: ['currentSession'],
+    queryKey: ["currentSession"],
     queryFn: authApi.getProfile,
     enabled: !!getCookie(KTX_ADMIN_ACCESS_TOKEN),
     retry: false,
@@ -91,11 +91,11 @@ export const useCurrentSession = () => {
   });
 };
 export const useRefreshToken = () => {
-  console.log('useRefreshToken');
+  console.log("useRefreshToken");
   return useMutation({
     mutationFn: authApi.refreshToken,
     onSuccess: (data) => {
-      console.log('datadd', data);
+      console.log("datadd", data);
       if (data.success && data.data.accessToken) {
         // Cập nhật access token mới vào cookie
         setAuthCookies({
@@ -103,16 +103,16 @@ export const useRefreshToken = () => {
           refreshToken: data.data.refreshToken,
           user: {
             profile: {
-              role: 'admin',
+              role: "admin",
             },
           },
         });
       }
     },
     onError: (error) => {
-      message.error('Phiên đăng nhập hết hạn');
+      message.error("Phiên đăng nhập hết hạn");
       // Xử lý logout khi refresh token thất bại
-      window.location.href = '/login';
+      window.location.href = "/login";
     },
   });
 };
@@ -121,13 +121,29 @@ export const useLogout = () => {
     mutationFn: authApi.logout,
     onSuccess: (data) => {
       if (data.success) {
-        message.success('Đăng xuất thành công');
+        message.success("Đăng xuất thành công");
       }
     },
     onError: () => {
-      message.error('Đăng xuất thất bại');
-    }
+      message.error("Đăng xuất thất bại");
+    },
   });
+};
+// Thêm API quên mật khẩu
+export const forgotPassword = async (email: string) => {
+  const response = await axiosClient.post(`${API_URL}/auth/forgot-password`, {
+    email,
+  });
+  return response.data;
+};
+
+// Thêm API reset mật khẩu
+export const resetPassword = async (token: string, password: string) => {
+  const response = await axiosClient.post(`${API_URL}/auth/reset-password`, {
+    token,
+    password,
+  });
+  return response.data;
 };
 
 export default authApi;

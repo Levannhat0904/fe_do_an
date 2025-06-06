@@ -360,7 +360,7 @@ const Homepage: React.FC = () => {
             ) : (
               <Statistic
                 title="Doanh thu tháng"
-                value={summaryData.monthlyRevenue}
+                value={Number(summaryData.monthlyRevenue).toLocaleString()}
                 prefix={<DollarOutlined className="text-yellow-500" />}
                 suffix="VNĐ"
                 className="text-center"

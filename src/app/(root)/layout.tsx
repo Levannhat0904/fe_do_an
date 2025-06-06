@@ -2,7 +2,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
-import { ConfigProvider } from "antd";
+import { ConfigProvider, message } from "antd";
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DisclosureProvider } from "@/contexts/DisclosureContext";

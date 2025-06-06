@@ -2,6 +2,8 @@ export enum Routers {
   home = "/",
   login = "/dang-nhap",
   forgotPassword = "/quen-mat-khau",
+  resetPassword = "/dat-lai-mat-khau",
+  register = "/dang-ky",
 }
 export enum RoutersStudent {
   home = "/sinh-vien",
@@ -129,11 +131,9 @@ export const enum RadioOptionTypeEnum {
   BUTTON = "button",
 }
 
-
 export enum SuffixType {
   select = "select",
 }
-
 
 export enum AttachmentTypeEnum {
   video = "video",
