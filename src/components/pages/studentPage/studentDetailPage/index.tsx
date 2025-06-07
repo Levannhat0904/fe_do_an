@@ -41,6 +41,7 @@ import RoommateInfo from "./components/RoommateInfo";
 import dayjs from "dayjs";
 import HistoryTimeline from "./components/HistoryTimeline";
 import { LOGO_URL } from "@/constants";
+import { sendMail } from "@/api/sendmail";
 
 const StudentDormitoryDetail = () => {
   const params = useParams();
@@ -130,6 +131,20 @@ const StudentDormitoryDetail = () => {
                 message: "Phê duyệt thành công",
                 description: `Đã phê duyệt đăng ký ký túc xá cho sinh viên ${student?.fullName}`,
               });
+              const to = {
+                Email: student?.email ?? "",
+                Name: student?.fullName ?? "",
+              };
+              const subject = "Đăng ký thông tin sinh viên thành công";
+              const text = `Chúc mừng bạn ${student?.fullName} đã đăng ký nội trú ký túc xá thành công!`;
+              const html = `<h1>Đăng ký thông tin sinh viên</h1>
+              <span>Chúc mừng bạn ${student?.fullName} đã đăng ký nội trú ký túc xá thành công!</span>
+              <span>Vui lòng truy cập vào trang web để xem thông tin sinh viên: <a href="https://ktx-student.vercel.app/">Website quản lý sinh viên</a></span>
+              <span>Email: email sinh viên đã đăng ký trên hệ thống</span>
+              <span>Mật khẩu: Ngày sinh của sinh viên theo dịnh dạng dd/mm/yyyy.</span>
+              <span>Xin chân thành cảm ơn!</span>
+              `;
+              sendMail(to, subject, text, html);
               refetch();
               resolve(true);
             },
@@ -162,6 +177,18 @@ const StudentDormitoryDetail = () => {
                 message: "Từ chối thành công",
                 description: `Đã từ chối đăng ký ký túc xá cho sinh viên ${student?.fullName}`,
               });
+              const to = {
+                Email: student?.email ?? "",
+                Name: student?.fullName ?? "",
+              };
+              const subject = "Đăng ký thông tin sinh viên bại.";
+              const text = `Đã từ chối đăng ký ký túc xá cho sinh viên ${student?.fullName}`;
+              const html = `<h1>Đăng ký thông tin sinh viên thất bại.</h1>
+              <span>Chúng tôi rất tiếc vì đã từ chối đăng ký ký túc xá cho sinh viên ${student?.fullName}.</span>
+              <span>Vui lòng liên hệ với chúng tôi để biết thêm chi tiết.</span>
+              <span>Xin chân thành cảm ơn!</span>
+              `;
+              sendMail(to, subject, text, html);
               refetch();
               resolve(true);
             },
@@ -285,7 +312,7 @@ const StudentDormitoryDetail = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="flex flex-col items-end">
             <div className="text-lg mb-2 flex items-center">
               <span className="mr-2">Trạng thái:</span>
@@ -305,7 +332,7 @@ const StudentDormitoryDetail = () => {
                     {
                       key: StudentStatusEnum.pending,
                       label: "Chờ duyệt",
-                      disabled: student?.status === StudentStatusEnum.pending,
+                      disabled: true,
                     },
                   ],
                 }}

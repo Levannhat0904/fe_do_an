@@ -36,6 +36,7 @@ import "dayjs/locale/vi";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { formatCurrency } from "@/utils/formatters";
+import { sendMail } from "@/api/sendmail";
 
 // Configure dayjs
 dayjs.extend(localizedFormat);
@@ -77,6 +78,10 @@ interface Student {
   studentCode: string;
   gender: string;
   hasActiveContract?: boolean;
+  email?: string;
+  password?: string;
+  birthDate?: string;
+  address?: string;
 }
 
 interface Room {
@@ -136,6 +141,7 @@ const ContractPage: React.FC = () => {
   const [form] = Form.useForm();
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  console.log("students", students);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
@@ -454,13 +460,9 @@ const ContractPage: React.FC = () => {
       const values = await form.validateFields();
       const [startDate, endDate] = values.dateRange;
 
-      console.log("Form values:", values); // Log all form values
-
       // Ensure dates are properly formatted as YYYY-MM-DD for the backend
       const formattedStartDate = startDate.format(DATE_FORMAT_API);
       const formattedEndDate = endDate.format(DATE_FORMAT_API);
-
-      console.log("Formatted dates:", formattedStartDate, formattedEndDate);
 
       // Prepare contract data with all fields
       interface ContractDataSubmit {
@@ -487,20 +489,25 @@ const ContractPage: React.FC = () => {
         contractData.status = values.status;
       }
 
-      console.log("Contract data to be sent:", contractData);
-      console.log(
-        "Editing contract:",
-        editingContract ? `ID: ${editingContract.id}` : "Creating new"
-      );
-
       if (editingContract) {
         // Update existing contract
         const response = await contractApi.updateContract(
           editingContract.id,
           contractData
         );
-        console.log("Update response:", response);
-
+        const student = students.find(
+          (student) => student.id === contractData.studentId
+        );
+        const to = {
+          Email: student?.email ?? "",
+          Name: student?.fullName ?? "",
+        };
+        const subject = "Cập nhật hợp đồng thành công";
+        const text = "Cập nhật hợp đồng thành công";
+        const html = `<span>Cập nhật hợp đồng thành công cho sinh viên ${student?.fullName}. Vui lòng truy cập vào trang web để xem thông tin hợp đồng: <a href="https://ktx-student.vercel.app/">Website quản lý sinh viên</a> để xem thông tin hợp đồng.</span>
+        <span>Xin chân thành cảm ơn!</span>
+        `;
+        sendMail(to, subject, text, html);
         notification.success({
           message: "Thành công",
           description: "Cập nhật hợp đồng thành công",
@@ -508,8 +515,19 @@ const ContractPage: React.FC = () => {
       } else {
         // Create new contract
         const response = await contractApi.createContract(contractData);
-        console.log("Create response:", response);
-
+        const student = students.find(
+          (student) => student.id === contractData.studentId
+        );
+        const to = {
+          Email: student?.email ?? "",
+          Name: student?.fullName ?? "",
+        };
+        const subject = "Tạo hợp đồng thành công";
+        const text = "Tạo hợp đồng thành công";
+        const html = `<span>Tạo hợp đồng thành công cho sinh viên ${student?.fullName}. Vui lòng truy cập vào trang web để xem thông tin hợp đồng: <a href="https://ktx-student.vercel.app/">Website quản lý sinh viên</a> để xem thông tin hợp đồng.</span>
+        <span>Xin chân thành cảm ơn!</span>
+        `;
+        sendMail(to, subject, text, html);
         notification.success({
           message: "Thành công",
           description: "Tạo hợp đồng thành công",
@@ -528,7 +546,7 @@ const ContractPage: React.FC = () => {
       });
     }
   };
-
+  console.log("contracts", contracts);
   const handleDeleteContract = async (contractId: number) => {
     try {
       await contractApi.deleteContract(contractId);
@@ -536,6 +554,20 @@ const ContractPage: React.FC = () => {
         message: "Thành công",
         description: "Xóa hợp đồng thành công",
       });
+      const studentId = contracts.find(
+        (contract) => contract.id === contractId
+      )?.studentId;
+      const student = students.find((student) => student.id === studentId);
+      const to = {
+        Email: student?.email ?? "",
+        Name: student?.fullName ?? "",
+      };
+      const subject = "Hủy hợp đồng thành công";
+      const text = "Hủy hợp đồng thành công";
+      const html = `<span>Hủy hợp đồng thành công cho sinh viên ${student?.fullName}. Vui lòng truy cập vào trang web để xem thông tin hợp đồng: <a href="https://ktx-student.vercel.app/">Website quản lý sinh viên</a> để xem thông tin hợp đồng.</span>
+      <span>Xin chân thành cảm ơn!</span>
+      `;
+      sendMail(to, subject, text, html);
       fetchContracts();
       fetchRooms(); // Refresh room list to update occupancy status
     } catch (error) {
