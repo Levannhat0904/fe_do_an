@@ -44,6 +44,10 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({
         return <Badge status="processing" text="Đang xử lý" />;
       case "completed":
         return <Badge status="success" text="Hoàn thành" />;
+      case "canceled":
+        return <Badge status="error" text="Đã hủy" />;
+      case "rejected":
+        return <Badge status="error" text="Từ chối" />;
       default:
         return <Badge status="default" text={status} />;
     }
@@ -63,7 +67,9 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({
   };
 
   const imageGallery =
-    request.images && Array.isArray(request.images) && request.images.length > 0 ? (
+    request.images &&
+    Array.isArray(request.images) &&
+    request.images.length > 0 ? (
       <>
         <style>{swiperStyles}</style>
         <div style={{ width: "100%", maxWidth: "100%", marginTop: "20px" }}>
@@ -125,8 +131,12 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({
     >
       <Descriptions bordered column={{ xs: 1, sm: 2 }}>
         <Descriptions.Item label="Mã yêu cầu">{request.id}</Descriptions.Item>
-        <Descriptions.Item label="Loại yêu cầu">{request.type}</Descriptions.Item>
-        <Descriptions.Item label="Mô tả">{request.description}</Descriptions.Item>
+        <Descriptions.Item label="Loại yêu cầu">
+          {request.type}
+        </Descriptions.Item>
+        <Descriptions.Item label="Mô tả">
+          {request.description}
+        </Descriptions.Item>
         <Descriptions.Item label="Mức độ ưu tiên">
           {renderPriority(request.priority)}
         </Descriptions.Item>
@@ -152,4 +162,4 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({
   );
 };
 
-export default MaintenanceDetailModal; 
+export default MaintenanceDetailModal;

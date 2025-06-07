@@ -89,7 +89,7 @@ export interface Contract {
   endDate?: string;
   depositAmount?: number;
   monthlyFee?: number;
-  status?: 'active' | 'expired' | 'terminated';
+  status?: "active" | "expired" | "terminated";
   createdAt?: string;
   updatedAt?: string;
 }
@@ -102,8 +102,8 @@ export interface MaintenanceRequest {
   requestType?: string;
   description?: string;
   imagePaths?: string[];
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
-  status?: 'pending' | 'processing' | 'completed' | 'rejected';
+  priority?: "low" | "normal" | "high" | "urgent";
+  status?: "pending" | "processing" | "completed" | "rejected" | "canceled";
   createdAt?: string;
   resolvedAt?: string;
   resolutionNote?: string;
@@ -122,7 +122,7 @@ export interface Invoice {
   waterFee?: number;
   serviceFee?: number;
   totalAmount?: number;
-  paymentStatus?: 'pending' | 'paid' | 'overdue';
+  paymentStatus?: "pending" | "paid" | "overdue";
   paymentDate?: string;
   paymentMethod?: string;
   createdAt?: string;
