@@ -22,11 +22,6 @@ export const adminRouters: MenuProps["items"] = [
     icon: <SIconGrid />,
   },
   {
-    label: "Quản lý đăng ký",
-    key: "/quan-ly-don-dang-ky",
-    icon: <SIconGrid />,
-  },
-  {
     label: "Quản lý sinh viên",
     key: "/quan-ly-sinh-vien",
     icon: <SIconGrid />,
@@ -68,11 +63,7 @@ export const studentRouters: MenuProps["items"] = [
     key: "/dang-ky-noi-tru",
     icon: <SIconGrid />,
   },
-  {
-    label: "Quản lý đăng ký",
-    key: "/quan-ly-don-dang-ky",
-    icon: <SIconGrid />,
-  },
+
   {
     label: "Quản lý sinh viên",
     key: "/quan-ly-sinh-vien",

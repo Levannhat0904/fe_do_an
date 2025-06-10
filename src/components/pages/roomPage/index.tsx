@@ -780,15 +780,7 @@ const DormitoryRoomManagement = () => {
           </div>
         </div>
 
-        <div className="mb-4 flex justify-between items-center">
-          <Radio.Group
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value)}
-          >
-            <Radio.Button value="table">Bảng</Radio.Button>
-            <Radio.Button value="card">Thẻ</Radio.Button>
-          </Radio.Group>
-
+        <div className="mb-4 flex justify-end items-center">
           <Button
             type="primary"
             icon={<PlusOutlined />}
