@@ -52,6 +52,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { StatusEnum } from "@/constants";
 import { ColumnType } from "antd/es/table";
+import buildingApi from "@/api/building";
 
 const { Option } = Select;
 
@@ -149,13 +150,8 @@ const DormitoryRoomManagement = () => {
   useEffect(() => {
     const fetchBuildings = async () => {
       try {
-        // This would be replaced with actual API call
-        const mockBuildings = [
-          { id: 1, name: "Tòa nhà A" },
-          { id: 2, name: "Tòa nhà B" },
-          { id: 3, name: "Tòa nhà C" },
-        ];
-        setBuildings(mockBuildings);
+        const response = await buildingApi.getAllBuildings();
+        setBuildings(response.data);
       } catch (error) {
         console.error("Error fetching buildings:", error);
       }
