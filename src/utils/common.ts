@@ -216,3 +216,48 @@ export const generateRandomSixDigits = () => {
 export const getIsPhoneNumberValidated = (phoneNumber: string) => {
   return phoneRegex.test(phoneNumber || "");
 };
+
+export const convertToJpg = (
+  file: File,
+  width?: number,
+  height?: number,
+  quality: number = 0.8
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width || img.width;
+        canvas.height = height || img.height;
+
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const newFile = new File(
+                [blob],
+                file.name.replace(/\.\w+$/, ".jpg"),
+                {
+                  type: "image/jpeg",
+                }
+              );
+              resolve(newFile);
+            } else {
+              reject(new Error("Không thể chuyển đổi ảnh sang JPG"));
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error("Không thể tải ảnh"));
+    };
+    reader.onerror = () => reject(new Error("Không thể đọc file"));
+    reader.readAsDataURL(file);
+  });
+};

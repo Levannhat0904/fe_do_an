@@ -47,6 +47,7 @@ const nextConfig = {
       "/quan-ly-ky-tuc-xa",
       "/quan-ly-toa-nha",
       "/tra-cuu-hoa-don",
+      "/quan-ly-bao-tri",
     ];
     const studentRoutes = [
       "/sinh-vien",

@@ -1,17 +1,5 @@
-// API for admin
-// active student
-// get all students
-// get student by id
-// update student status
-// create admin
-// change password
-
-import { useMutation, useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import axiosClient from './axiosClient';
-
-const API_URL = "http://localhost:3000/api/";
-
+const API_URL = "http://localhost:3000/api";
 interface MaintenanceRequest {
   id: number;
   requestNumber: string;
@@ -42,9 +30,7 @@ interface MaintenanceResponse {
   };
 }
 
-const adminApi = {
-  // ... existing code ...
-
+const maintenanceApi = {
   // Lấy danh sách tất cả yêu cầu bảo trì
   getAllMaintenanceRequests: async (filters: {
     status?: string;
@@ -54,9 +40,15 @@ const adminApi = {
     page?: number;
     limit?: number;
   }): Promise<MaintenanceResponse> => {
-    const response = await axiosClient.get(`${API_URL}/admin/maintenance-requests`, {
+    const response = await axiosClient.get(`${API_URL}/maintenance`, {
       params: filters,
     });
+    return response.data;
+  },
+
+  // Lấy chi tiết yêu cầu bảo trì
+  getMaintenanceRequestDetail: async (requestId: number): Promise<{ data: MaintenanceRequest }> => {
+    const response = await axiosClient.get(`${API_URL}/maintenance/${requestId}`);
     return response.data;
   },
 
@@ -71,7 +63,7 @@ const adminApi = {
     }
   ) => {
     const response = await axiosClient.put(
-      `${API_URL}/admin/maintenance-requests/${requestId}`, 
+      `${API_URL}/maintenance/${requestId}`, 
       data
     );
     return response.data;
@@ -80,7 +72,7 @@ const adminApi = {
   // Thêm yêu cầu bảo trì mới
   addMaintenanceRequest: async (formData: FormData) => {
     const response = await axiosClient.post(
-      `${API_URL}/admin/maintenance-requests`,
+      `/api/maintenance`,
       formData,
       {
         headers: {
@@ -94,10 +86,10 @@ const adminApi = {
   // Xóa yêu cầu bảo trì
   deleteMaintenanceRequest: async (requestId: number) => {
     const response = await axiosClient.delete(
-      `${API_URL}/admin/maintenance-requests/${requestId}`
+      `${API_URL}/maintenance/${requestId}`
     );
     return response.data;
   },
 };
 
-export default adminApi;
+export default maintenanceApi;

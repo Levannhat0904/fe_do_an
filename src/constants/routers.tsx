@@ -42,6 +42,11 @@ export const adminRouters: MenuProps["items"] = [
     icon: <SIconBadge />,
   },
   {
+    label: "Quản lý bảo trì",
+    key: "/quan-ly-bao-tri",
+    icon: <SIconGrid />,
+  },
+  {
     label: "Quản lý hóa đơn",
     key: "/quan-ly-hoa-don",
     icon: <SIconIdCard />,
