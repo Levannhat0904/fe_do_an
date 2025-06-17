@@ -16,16 +16,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from "recharts";
 import dashboardApi, {
   ChartData,
-  OccupancyData,
   DashboardSummary,
-  OccupancyStats,
 } from "@/api/dashboard";
 import { getCookie } from "cookies-next";
 import { UserType } from "@/constants";
@@ -33,7 +27,6 @@ import { useRouter } from "next/navigation";
 import useWindowSize from "@/hooks/useWindowSize";
 
 const { Title } = Typography;
-const COLORS = ["#1677ff", "#ffd666"];
 
 // Hàm định dạng số liệu
 const formatNumber = (value: number): string => {
@@ -98,9 +91,20 @@ const StatisticsChart = ({
     }
     return { top: 10, right: 40, left: 60, bottom: 20 };
   }, [isMobile]);
+  
+  // Tính toán chiều cao để đảm bảo biểu đồ đủ lớn
+  const chartHeight = useMemo(() => {
+    return isMobile ? 320 : 450;
+  }, [isMobile]);
+  
+  // Tính toán chiều rộng của mỗi mục trên trục x
+  const barSize = useMemo(() => {
+    // Nếu là biểu đồ theo năm (có thể nhiều cột hơn), làm hẹp hơn
+    return xKey === "year" ? 30 : 40;
+  }, [xKey]);
 
   return (
-    <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
+    <div className="chart-container" style={{ position: 'relative', width: '100%', height: chartHeight, overflow: 'hidden' }}>
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <Spin />
@@ -110,230 +114,115 @@ const StatisticsChart = ({
           Không có dữ liệu
         </div>
       ) : (
-        <AreaChart
-          data={processedData}
-          margin={chartMargin}
-        >
-          <defs>
-            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1} />
-            </linearGradient>
-            <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#82ca9d" stopOpacity={0.1} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-          <XAxis 
-            dataKey={xKey} 
-            axisLine={false} 
-            tickLine={false}
-            tick={{ fill: '#666', fontSize: isMobile ? 10 : 12 }}
-            padding={{ left: 10, right: 10 }}
-            interval={isMobile ? 1 : 0}
-          />
-          <YAxis
-            yAxisId="left"
-            axisLine={false}
-            tickLine={false}
-            tickFormatter={(value) => `${value / 1000000}M`}
-            domain={[0, maxRevenue]}
-            tick={{ fill: '#666', fontSize: isMobile ? 10 : 12 }}
-            width={isMobile ? 30 : 50}
-            label={isMobile ? undefined : {
-              value: "Doanh thu (VNĐ)",
-              angle: -90,
-              position: "insideLeft",
-              offset: -45,
-              style: { textAnchor: 'middle', fill: '#666', fontSize: 13 }
-            }}
-          />
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            domain={[0, maxStudents]}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: '#666', fontSize: isMobile ? 10 : 12 }}
-            width={isMobile ? 30 : 50}
-            label={isMobile ? undefined : {
-              value: "Sinh viên",
-              angle: 90,
-              position: "insideRight",
-              offset: -30,
-              style: { textAnchor: 'middle', fill: '#666', fontSize: 13 }
-            }}
-          />
-          <Tooltip
-            contentStyle={{ 
-              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-              borderRadius: '8px', 
-              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #f0f0f0',
-              fontSize: isMobile ? '12px' : '14px'
-            }}
-            formatter={(value: number, name: string) => {
-              if (name === "Doanh thu")
-                return [`${formatNumber(value)} VNĐ`, name];
-              return [formatNumber(value), name];
-            }}
-            labelFormatter={(label) => {
-              if (xKey === "month") {
-                return typeof label === 'string' ? formatMonth(label) : `Tháng ${label}`;
-              }
-              return `Năm ${label}`;
-            }}
-            labelStyle={{ color: '#333', fontWeight: 500 }}
-          />
-          <Area
-            yAxisId="left"
-            type="monotone"
-            dataKey="revenue"
-            stroke="#8884d8"
-            fill="url(#colorRevenue)"
-            name="Doanh thu"
-            strokeWidth={2}
-            activeDot={{ r: isMobile ? 4 : 6, strokeWidth: 1, stroke: '#fff' }}
-          />
-          <Area
-            yAxisId="right"
-            type="monotone"
-            dataKey="students"
-            stroke="#82ca9d"
-            fill="url(#colorStudents)"
-            name="Sinh viên"
-            strokeWidth={2}
-            activeDot={{ r: isMobile ? 4 : 6, strokeWidth: 1, stroke: '#fff' }}
-          />
-        </AreaChart>
-      )}
-    </ResponsiveContainer>
-  );
-};
-
-const OccupancyChart = ({
-  data,
-  loading,
-}: {
-  data: OccupancyData[];
-  loading: boolean;
-}) => {
-  const { width } = useWindowSize();
-  const isMobile = width < 576;
-  
-  // Đảm bảo dữ liệu luôn có tổng là 100%
-  const normalizedData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    
-    const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
-    // Nếu tổng đã là 100, giữ nguyên
-    if (total === 100) return data;
-    
-    // Nếu không, chuẩn hóa để tổng là 100
-    return data.map(item => ({
-      ...item,
-      value: Math.round(((item.value || 0) / total) * 100)
-    }));
-  }, [data]);
-
-  // Thêm thông tin chi tiết cho tooltip
-  const enhancedData = useMemo(() => {
-    return normalizedData.map(item => ({
-      ...item,
-      displayValue: `${item.value}%`,
-    }));
-  }, [normalizedData]);
-
-  return (
-    <ResponsiveContainer width="100%" height={isMobile ? 250 : 320}>
-      {loading ? (
-        <div className="flex items-center justify-center h-full">
-          <Spin />
-        </div>
-      ) : enhancedData.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-gray-500">
-          Không có dữ liệu
-        </div>
-      ) : (
-        <PieChart>
-          <defs>
-            <filter id="shadow" height="200%">
-              <feDropShadow dx="0" dy="0" stdDeviation="3" floodOpacity="0.2" />
-            </filter>
-          </defs>
-          <Pie
-            data={enhancedData}
-            cx="50%"
-            cy="45%"
-            innerRadius={isMobile ? 50 : 70}
-            outerRadius={isMobile ? 80 : 100}
-            startAngle={90}
-            endAngle={-270}
-            paddingAngle={2}
-            dataKey="value"
-            filter="url(#shadow)"
-            animationBegin={0}
-            animationDuration={1000}
-            animationEasing="ease-out"
-            label={isMobile ? undefined : ({ name, value }) => `${value}%`}
-            labelLine={false}
-          >
-            {enhancedData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-                style={{ cursor: "pointer", filter: "brightness(100%)" }}
-              />
-            ))}
-          </Pie>
-
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                const data = payload[0];
-                return (
-                  <div className="bg-white px-4 py-2 border border-gray-200 rounded-lg shadow-md">
-                    <p
-                      className="text-base"
-                      style={{ color: data.payload?.fill || '#333' }}
-                    >
-                      <span className="font-medium">{data.name}</span>
-                    </p>
-                    <p className="text-sm mt-1">
-                      Tỷ lệ: <span className="font-medium">{data.value}%</span>
-                    </p>
-                  </div>
-                );
-              }
-              return null;
-            }}
-            wrapperStyle={{ outline: "none" }}
-          />
-
-          <Legend
-            verticalAlign="bottom"
-            height={36}
-            iconType="circle"
-            wrapperStyle={{
-              bottom: 10,
-              fontSize: isMobile ? '12px' : '14px'
-            }}
-            formatter={(value) => (
-              <span
-                style={{
-                  color: "#666666",
-                  fontSize: isMobile ? "12px" : "14px",
-                  fontWeight: 500,
-                }}
+        <div style={{ width: '100%', height: '100%', overflowX: 'auto' }}>
+          <div style={{ 
+            width: xKey === "year" ? Math.max(width, processedData.length * 80) : '100%', 
+            height: '100%'
+          }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={processedData}
+                margin={chartMargin}
               >
-                {value}
-              </span>
-            )}
-          />
-        </PieChart>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis 
+                  dataKey={xKey} 
+                  axisLine={false} 
+                  tickLine={false}
+                  tick={{ fill: '#666', fontSize: isMobile ? 10 : 12 }}
+                  padding={{ left: 10, right: 10 }}
+                  interval={0}
+                  height={40}
+                />
+                <YAxis
+                  yAxisId="left"
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => `${value / 1000000}M`}
+                  domain={[0, maxRevenue]}
+                  tick={{ fill: '#666', fontSize: isMobile ? 10 : 12 }}
+                  width={isMobile ? 40 : 60}
+                  label={isMobile ? undefined : {
+                    value: "Doanh thu (VNĐ)",
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: -45,
+                    style: { textAnchor: 'middle', fill: '#666', fontSize: 13 }
+                  }}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  domain={[0, maxStudents]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#666', fontSize: isMobile ? 10 : 12 }}
+                  width={isMobile ? 30 : 50}
+                  label={isMobile ? undefined : {
+                    value: "Sinh viên",
+                    angle: 90,
+                    position: "insideRight",
+                    offset: -30,
+                    style: { textAnchor: 'middle', fill: '#666', fontSize: 13 }
+                  }}
+                />
+                <Tooltip
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                    borderRadius: '8px', 
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+                    border: '1px solid #f0f0f0',
+                    fontSize: isMobile ? '12px' : '14px'
+                  }}
+                  formatter={(value: number, name: string) => {
+                    if (name === "Doanh thu")
+                      return [`${formatNumber(value)} VNĐ`, name];
+                    return [formatNumber(value), name];
+                  }}
+                  labelFormatter={(label) => {
+                    if (xKey === "month") {
+                      return typeof label === 'string' ? formatMonth(label) : `Tháng ${label}`;
+                    }
+                    return `Năm ${label}`;
+                  }}
+                  labelStyle={{ color: '#333', fontWeight: 500 }}
+                />
+                <Area
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#8884d8"
+                  fill="url(#colorRevenue)"
+                  name="Doanh thu"
+                  strokeWidth={2}
+                  activeDot={{ r: isMobile ? 4 : 6, strokeWidth: 1, stroke: '#fff' }}
+                />
+                <Area
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="students"
+                  stroke="#82ca9d"
+                  fill="url(#colorStudents)"
+                  name="Sinh viên"
+                  strokeWidth={2}
+                  activeDot={{ r: isMobile ? 4 : 6, strokeWidth: 1, stroke: '#fff' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       )}
-    </ResponsiveContainer>
+    </div>
   );
 };
 
@@ -345,7 +234,6 @@ const Homepage: React.FC = () => {
     summary: true,
     monthlyStats: true,
     yearlyStats: true,
-    occupancyStats: true,
   });
 
   const [summaryData, setSummaryData] = useState<DashboardSummary>({
@@ -362,16 +250,6 @@ const Homepage: React.FC = () => {
 
   const [monthlyData, setMonthlyData] = useState<ChartData[]>([]);
   const [yearlyData, setYearlyData] = useState<ChartData[]>([]);
-  const [occupancyData, setOccupancyData] = useState<OccupancyStats>({
-    monthly: [
-      { name: "Đã sử dụng", value: 0 },
-      { name: "Còn trống", value: 0 },
-    ],
-    yearly: [
-      { name: "Đã sử dụng", value: 0 },
-      { name: "Còn trống", value: 0 },
-    ],
-  });
 
   // Xử lý dữ liệu tóm tắt để hiển thị
   const formattedSummary = useMemo(() => {
@@ -400,27 +278,12 @@ const Homepage: React.FC = () => {
         const yearly = await dashboardApi.getYearlyStats();
         setYearlyData(yearly || []);
         setLoading((prev) => ({ ...prev, yearlyStats: false }));
-
-        // Fetch occupancy stats
-        const occupancy = await dashboardApi.getOccupancyStats();
-        setOccupancyData(occupancy || {
-          monthly: [
-            { name: "Đã sử dụng", value: 0 },
-            { name: "Còn trống", value: 0 },
-          ],
-          yearly: [
-            { name: "Đã sử dụng", value: 0 },
-            { name: "Còn trống", value: 0 },
-          ],
-        });
-        setLoading((prev) => ({ ...prev, occupancyStats: false }));
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setLoading({
           summary: false,
           monthlyStats: false,
           yearlyStats: false,
-          occupancyStats: false,
         });
       }
     };
@@ -448,29 +311,6 @@ const Homepage: React.FC = () => {
           data={yearlyData}
           xKey="year"
           loading={loading.yearlyStats}
-        />
-      ),
-    },
-  ];
-
-  const occupancyItems = [
-    {
-      key: "month",
-      label: "Theo tháng",
-      children: (
-        <OccupancyChart
-          data={occupancyData.monthly}
-          loading={loading.occupancyStats}
-        />
-      ),
-    },
-    {
-      key: "year",
-      label: "Theo năm",
-      children: (
-        <OccupancyChart
-          data={occupancyData.yearly}
-          loading={loading.occupancyStats}
         />
       ),
     },
@@ -572,22 +412,11 @@ const Homepage: React.FC = () => {
       </Row>
 
       <Row gutter={[12, 12]} className="mt-3 sm:mt-6">
-        <Col xs={24} lg={16}>
+        <Col xs={24}>
           <Card className="h-auto" bodyStyle={isMobile ? { padding: '12px' } : {}}>
             <Tabs
               defaultActiveKey="month"
               items={statisticsItems}
-              className="h-full"
-              size={isMobile ? "small" : "middle"}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={8}>
-          <Card className="h-auto" bodyStyle={isMobile ? { padding: '12px' } : {}}>
-            <Tabs
-              defaultActiveKey="month"
-              items={occupancyItems}
               className="h-full"
               size={isMobile ? "small" : "middle"}
             />
