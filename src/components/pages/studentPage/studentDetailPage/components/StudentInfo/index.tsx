@@ -9,8 +9,17 @@ import { Card } from "antd";
 import { Descriptions } from "antd";
 import dayjs from "dayjs";
 import router from "next/router";
+import { useGetProvinces, useGetDistricts, useGetWards } from "@/api/administrative";
 
 const StudentInfo = ({ student }: { student: Student }) => {
+  const { data: provinces } = useGetProvinces();
+  const { data: districts } = useGetDistricts(Number(student.province));
+  const { data: wards } = useGetWards(Number(student.province), Number(student.district));
+
+  const provinceLabel = provinces?.find((p: { code: number | string; name: string }) => String(p.code) === String(student.province))?.name || student.province;
+  const districtLabel = districts?.data?.find((d: { code: string | number; name: string }) => String(d.code) === String(student.district))?.name || student.district;
+  const wardLabel = wards?.data?.find((w: { code: string | number; name: string }) => String(w.code) === String(student.ward))?.name || student.ward;
+
   const getStatusTag = (status?: string) => {
     if (!status) return <Tag color="default">Không có thông tin</Tag>;
 
@@ -49,13 +58,13 @@ const StudentInfo = ({ student }: { student: Student }) => {
             {student.phone}
           </Descriptions.Item>
           <Descriptions.Item label="Tỉnh/Thành phố">
-            {student.province}
+            {provinceLabel}
           </Descriptions.Item>
           <Descriptions.Item label="Quận/Huyện">
-            {student.district}
+            {districtLabel}
           </Descriptions.Item>
           <Descriptions.Item label="Phường/Xã">
-            {student.ward}
+            {wardLabel}
           </Descriptions.Item>
           <Descriptions.Item label="Địa chỉ">
             {student.address}

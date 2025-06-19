@@ -40,6 +40,9 @@ import { sendMail } from "@/api/sendmail";
 import { useRouter, useSearchParams } from "next/navigation";
 import debounce from "lodash/debounce";
 import * as XLSX from "xlsx";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import ContractPreview from "@/components/molecules/ContractPreview";
 
 // Configure dayjs
 dayjs.extend(localizedFormat);
@@ -85,6 +88,7 @@ interface Student {
   password?: string;
   birthDate?: string;
   address?: string;
+  status: string;
 }
 
 interface Room {
@@ -175,6 +179,8 @@ const ContractPage: React.FC = () => {
   const [monthlyFeeFormatted, setMonthlyFeeFormatted] = useState<string>("");
   const [page, setPage] = useState<number>(getParamFromUrl("page", 1));
   const [limit, setLimit] = useState<number>(getParamFromUrl("limit", 10));
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const contractRef = React.useRef<HTMLDivElement>(null);
 
   // Cập nhật URL khi tham số thay đổi
   const updateURL = useCallback((search: string, status: string, currentPage: number, pageSize: number) => {
@@ -669,7 +675,7 @@ const ContractPage: React.FC = () => {
   };
 
   const handlePrintContract = (contractId: number) => {
-    // Implementation for printing contract
+    // Implementation for printing contraTaict
     notification.info({
       message: "Thông báo",
       description: "Chức năng in hợp đồng đang được phát triển.",
@@ -827,6 +833,38 @@ const ContractPage: React.FC = () => {
     XLSX.writeFile(workbook, "danh_sach_hop_dong.xlsx");
   };
 
+  // Hàm tải hợp đồng PDF
+  const handleDownloadContract = async () => {
+    if (!contractRef.current || !detailContract) return;
+    try {
+      setDetailLoading(true);
+      const canvas = await html2canvas(contractRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdf = new jsPDF("p", "mm", "a4");
+      pdf.addImage(
+        canvas.toDataURL("image/png"),
+        "PNG",
+        0,
+        0,
+        imgWidth,
+        imgHeight
+      );
+      pdf.save(`hop-dong-${detailContract.contractNumber}.pdf`);
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể tải hợp đồng. Vui lòng thử lại sau.",
+      });
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   return (
     <div className="contract-page p-2 sm:p-4 md:p-6">
       <Card className="rounded-lg shadow-sm">
@@ -926,11 +964,9 @@ const ContractPage: React.FC = () => {
                   {students
                     .filter(
                       (student) =>
-                        // Nếu đang chỉnh sửa, hiển thị sinh viên hiện tại
-                        // Nếu thêm mới, chỉ hiển thị sinh viên chưa có hợp đồng active
-                        !student.hasActiveContract ||
-                        (editingContract &&
-                          student.id === editingContract.studentId)
+                        student.status === "active" &&
+                        (!student.hasActiveContract ||
+                          (editingContract && student.id === editingContract.studentId))
                     )
                     .map((student) => (
                       <Option key={student.id} value={student.id}>
@@ -1053,15 +1089,28 @@ const ContractPage: React.FC = () => {
             Đóng
           </Button>,
           <Button
-            key="print"
-            type="primary"
-            icon={<PrinterOutlined />}
-            onClick={() =>
-              detailContract && handlePrintContract(detailContract.id)
-            }
+            key="preview"
+            onClick={() => setIsPreviewVisible(true)}
+            type="default"
           >
-            In hợp đồng
+            Xem hợp đồng
           </Button>,
+          // <Button
+          //   key="download"
+          //   type="primary"
+          //   onClick={handleDownloadContract}
+          //   loading={detailLoading}
+          //   style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
+          // >
+          //   Tải hợp đồng
+          // </Button>,
+          // <Button
+          //   key="print"
+          //   icon={<PrinterOutlined />}
+          //   onClick={() => detailContract && handlePrintContract(detailContract.id)}
+          // >
+          //   In hợp đồng
+          // </Button>,
         ]}
         bodyStyle={{ padding: 12 }}
       >
@@ -1144,6 +1193,47 @@ const ContractPage: React.FC = () => {
             Không có dữ liệu
           </div>
         )}
+      </Modal>
+
+      {/* Modal xem trước hợp đồng */}
+      <Modal
+        title="Xem trước hợp đồng"
+        open={isPreviewVisible}
+        onCancel={() => setIsPreviewVisible(false)}
+        width={typeof window !== 'undefined' && window.innerWidth < 600 ? '98vw' : 800}
+        footer={[
+          <Button key="close" onClick={() => setIsPreviewVisible(false)}>
+            Đóng
+          </Button>,
+          <Button
+            key="download"
+            type="primary"
+            onClick={handleDownloadContract}
+            loading={detailLoading}
+            style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
+          >
+            Tải hợp đồng
+          </Button>,
+        ]}
+      >
+        <div ref={contractRef}>
+          {detailContract && (
+            <ContractPreview
+              contractData={{
+                contractNumber: detailContract.contractNumber || "",
+                studentName: detailContract.fullName || "",
+                studentId: detailContract.studentCode || "",
+                roomNumber: detailContract.roomNumber || "",
+                buildingName: detailContract.buildingName || "",
+                startDate: detailContract.startDate || "",
+                endDate: detailContract.endDate || "",
+                depositAmount: detailContract.depositAmount || 0,
+                monthlyFee: detailContract.monthlyFee || 0,
+                studentCode: detailContract.studentCode || "",
+              }}
+            />
+          )}
+        </div>
       </Modal>
     </div>
   );

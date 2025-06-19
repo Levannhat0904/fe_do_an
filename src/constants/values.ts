@@ -17,26 +17,26 @@ export const COLLAPSE_ICON_PROPS = {
 // Fake data
 
 export const FACULTY_OPTIONS = [
-  { label: "Công nghệ thông tin", value: "cntt" },
-  { label: "Kinh tế", value: "kinhte" },
-  { label: "Khoa học xã hội", value: "khxh" },
+  { label: "Công nghệ thông tin", value: "Công nghệ thông tin" },
+  { label: "Kinh tế", value: "Kinh tế" },
+  { label: "Khoa học xã hội", value: "Khoa học xã hội" },
 ];
 
 export const MAJOR_OPTIONS: Record<string, { label: string; value: string }[]> = {
-  cntt: [
-    { label: "Khoa học máy tính", value: "khmt" },
-    { label: "Công nghệ phần mềm", value: "cnpm" },
-    { label: "Hệ thống thông tin", value: "httt" },
+  "Công nghệ thông tin": [
+    { label: "Khoa học máy tính", value: "Khoa học máy tính" },
+    { label: "Công nghệ phần mềm", value: "Công nghệ phần mềm" },
+    { label: "Hệ thống thông tin", value: "Hệ thống thông tin" },
   ],
-  kinhte: [
-    { label: "Tài chính", value: "tc" },
-    { label: "Kế toán", value: "kt" },
-    { label: "Quản trị kinh doanh", value: "qtkd" },
+  "Kinh tế": [
+    { label: "Tài chính", value: "Tài chính" },
+    { label: "Kế toán", value: "Kế toán" },
+    { label: "Quản trị kinh doanh", value: "Quản trị kinh doanh" },
   ],
-  khxh: [
-    { label: "Tâm lý học", value: "tlh" },
-    { label: "Xã hội học", value: "xhh" },
-    { label: "Triết học", value: "th" },
+  "Khoa học xã hội": [
+    { label: "Tâm lý học", value: "Tâm lý học" },
+    { label: "Xã hội học", value: "Xã hội học" },
+    { label: "Triết học", value: "Triết học" },
   ],
 };
 
