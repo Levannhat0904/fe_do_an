@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import {
   Form,
-  Input,
   Button,
   DatePicker,
   Select,
@@ -35,14 +34,12 @@ import { useGetDistricts, useGetWards } from "@/api/administrative";
 import { FACULTY_OPTIONS, MAJOR_OPTIONS } from "@/constants/values";
 import { KInput } from "@/components/atoms";
 const { Option } = Select;
-const { TextArea } = Input;
 
 const StudentForm = () => {
   const { mutate: createStudentRegistration, isPending } =
     useCreateStudentRegistration();
   const [form] = Form.useForm();
   const { data: provinces } = useGetProvinces();
-  const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [selectedProvince, setSelectedProvince] = useState<number>();
   const [selectedDistrict, setSelectedDistrict] = useState<number>();
@@ -51,7 +48,6 @@ const StudentForm = () => {
   const [selectedFaculty, setSelectedFaculty] = useState<string>();
 
   const onFinish = (values: any) => {
-    setLoading(true);
     const payload = {
       ...values,
       birthDate: values.birthDate.format("YYYY-MM-DD"),
@@ -446,7 +442,7 @@ const StudentForm = () => {
               <KButton
                 type="primary"
                 htmlType="submit"
-                // loading={loading}
+                loading={isPending}
                 className="bg-blue-600 hover:bg-blue-700 px-6 h-10 font-medium"
               >
                 Lưu thông tin

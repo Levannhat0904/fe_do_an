@@ -272,6 +272,8 @@ export const useCreateStudentRegistration = () => {
     onSuccess: (response) => {
       if (response.success) {
         message.success('Đăng ký thành công, vui lòng chờ admin phê duyệt');
+        window.location.href = "/quan-ly-sinh-vien";
+        window.location.reload();
       }
     },
     onError: (error) => {
