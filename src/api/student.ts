@@ -96,6 +96,7 @@ interface GetStudentsParams {
   page?: number;
   limit?: number;
   search?: string;
+  status?: string;
 }
 
 interface MaintenanceRequestsResponse {
@@ -133,7 +134,8 @@ const studentApi = {
       params: {
         page: params.page,
         limit: params.limit,
-        search: params.search
+        search: params.search,
+        status: params.status
       }
     });
     return response.data;
@@ -278,10 +280,10 @@ export const useCreateStudentRegistration = () => {
   });
 };
 
-export const useGetStudents = (page: number = 1, limit: number = 10, search: string = "") => {
+export const useGetStudents = (page: number = 1, limit: number = 10, search: string = "", status: string = "") => {
   return useQuery({
-    queryKey: ['students', page, limit, search],
-    queryFn: () => studentApi.getAllStudents({ page, limit, search }),
+    queryKey: ['students', page, limit, search, status],
+    queryFn: () => studentApi.getAllStudents({ page, limit, search, status }),
   });
 };
 

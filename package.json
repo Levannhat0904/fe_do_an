@@ -30,7 +30,8 @@
     "recharts": "^2.15.1",
     "sass": "^1.77.8",
     "swiper": "^11.2.8",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.13",

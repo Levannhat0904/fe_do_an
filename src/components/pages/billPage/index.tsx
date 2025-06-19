@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   Button,
@@ -34,6 +34,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   CalendarOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import invoiceApi, { Invoice } from "@/api/invoice";
 import axiosClient from "@/api/axiosClient";
@@ -43,6 +44,9 @@ import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { useRouter, useSearchParams } from "next/navigation";
+import debounce from "lodash/debounce";
+import * as XLSX from "xlsx";
 
 // Configure dayjs
 dayjs.extend(localizedFormat);
@@ -90,22 +94,43 @@ interface Building {
 }
 
 const BillPage: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Helper lấy giá trị từ URL
+  const getParamValue = useCallback(
+    (key: string, defaultValue: string = "") => {
+      const value = searchParams.get(key);
+      return value !== null ? value : defaultValue;
+    },
+    [searchParams]
+  );
+
+  // State khởi tạo từ URL
+  const [searchText, setSearchText] = useState(getParamValue("search"));
+  const [statusFilter, setStatusFilter] = useState(getParamValue("status", "all"));
+  const [buildingFilter, setBuildingFilter] = useState<number | null>(
+    searchParams.has("building") ? Number(getParamValue("building")) : null
+  );
+  const [page, setPage] = useState(Number(getParamValue("page", "1")));
+  const [limit, setLimit] = useState(Number(getParamValue("limit", "10")));
+  const [dateRange, setDateRange] = useState<[
+    dayjs.Dayjs | null,
+    dayjs.Dayjs | null
+  ]>([
+    getParamValue("startDate") ? dayjs(getParamValue("startDate")) : null,
+    getParamValue("endDate") ? dayjs(getParamValue("endDate")) : null,
+  ]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchText, setSearchText] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [isDetailModalVisible, setIsDetailModalVisible] =
     useState<boolean>(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
-  const [buildingFilter, setBuildingFilter] = useState<number | null>(null);
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
-  const [dateRange, setDateRange] = useState<
-    [dayjs.Dayjs | null, dayjs.Dayjs | null]
-  >([null, null]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -115,6 +140,48 @@ const BillPage: React.FC = () => {
     [key: number]: undefined;
   }>({});
   const [form] = Form.useForm();
+  // State cho thống kê tổng
+  const [invoiceStats, setInvoiceStats] = useState({
+    total: 0,
+    paid: 0,
+    pending: 0,
+    overdue: 0,
+    waiting_for_approval: 0,
+  });
+
+  // Debounce search để tránh lag khi gõ
+  const debouncedSearch = useCallback(
+    debounce((value: string) => {
+      setSearchText(value);
+      setPage(1);
+    }, 500),
+    []
+  );
+
+  // Hàm cập nhật URL
+  const updateUrlParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (searchText) params.set("search", searchText);
+    if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+    if (buildingFilter) params.set("building", buildingFilter.toString());
+    if (page > 1) params.set("page", page.toString());
+    if (limit !== 10) params.set("limit", limit.toString());
+    if (dateRange[0]) params.set("startDate", dateRange[0]?.format(DATE_FORMAT_API));
+    if (dateRange[1]) params.set("endDate", dateRange[1]?.format(DATE_FORMAT_API));
+    const queryString = params.toString();
+    const url = queryString ? `?${queryString}` : "";
+    router.push(`/quan-ly-hoa-don${url}`, { scroll: false });
+  }, [searchText, statusFilter, buildingFilter, page, limit, dateRange, router]);
+
+  // Đồng bộ URL khi state thay đổi
+  useEffect(() => {
+    updateUrlParams();
+  }, [searchText, statusFilter, buildingFilter, page, limit, dateRange, updateUrlParams]);
+
+  // Fetch lại khi filter/search/pagination thay đổi
+  useEffect(() => {
+    fetchInvoices(page, limit);
+  }, [searchText, statusFilter, buildingFilter, page, limit, dateRange]);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -126,6 +193,15 @@ const BillPage: React.FC = () => {
   useEffect(() => {
     filterInvoices();
   }, [invoices, searchText, statusFilter, buildingFilter]);
+
+  // Khi load trang, gọi API lấy thống kê tổng
+  useEffect(() => {
+    const fetchStats = async () => {
+      const res = await invoiceApi.getInvoiceStats();
+      if (res.success) setInvoiceStats(res.data);
+    };
+    fetchStats();
+  }, []);
 
   // Fetch all invoices with pagination and filters
   const fetchInvoices = async (page = 1, limit = 10) => {
@@ -271,17 +347,25 @@ const BillPage: React.FC = () => {
 
   // Handle search input change
   const handleSearch = (value: string) => {
-    setSearchText(value);
+    if (value === "") {
+      setSearchText("");
+      setPage(1);
+      fetchInvoices(1, limit); // Fetch lại ngay khi clear search
+    } else {
+      debouncedSearch(value);
+    }
   };
 
   // Handle status filter change
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
+    setPage(1);
   };
 
   // Handle building filter change
   const handleBuildingFilterChange = (value: number | null) => {
     setBuildingFilter(value);
+    setPage(1);
   };
 
   // Handle date range change
@@ -290,6 +374,7 @@ const BillPage: React.FC = () => {
     dateStrings: [string, string]
   ) => {
     setDateRange(dates || [null, null]);
+    setPage(1);
   };
 
   // Show invoice creation modal
@@ -400,6 +485,7 @@ const BillPage: React.FC = () => {
       setIsModalVisible(false);
       setSelectedInvoice(null);
       fetchInvoices();
+      fetchInvoiceStats(); // Fetch lại thống kê tổng
     } catch (error) {
       console.error("Error submitting invoice:", error);
       notification.error({
@@ -420,7 +506,8 @@ const BillPage: React.FC = () => {
         message: "Thành công",
         description: "Xóa hóa đơn thành công",
       });
-      fetchInvoices();
+      fetchInvoices(page, limit);
+      fetchInvoiceStats(); // Fetch lại thống kê tổng
     } catch (error) {
       console.error("Error deleting invoice:", error);
       notification.error({
@@ -436,11 +523,10 @@ const BillPage: React.FC = () => {
       await invoiceApi.updateInvoiceStatus(id, status);
       notification.success({
         message: "Thành công",
-        description: `Cập nhật trạng thái hóa đơn thành "${
-          statusText[status as keyof typeof statusText]
-        }" thành công`,
+        description: `Cập nhật trạng thái hóa đơn thành "${statusText[status as keyof typeof statusText]}" thành công`,
       });
-      fetchInvoices();
+      fetchInvoices(page, limit);
+      fetchInvoiceStats(); // Fetch lại thống kê tổng
     } catch (error) {
       console.error("Error updating invoice status:", error);
       notification.error({
@@ -520,12 +606,13 @@ const BillPage: React.FC = () => {
       });
     }
   };
-
+  
   // Generate HTML for invoice printing
   const generateInvoiceHtml = (invoice: Invoice) => {
     const formattedDate = dayjs().format("DD/MM/YYYY HH:mm:ss");
-    const invoiceMonth = dayjs(invoice.invoiceMonth).format("MM/YYYY");
-    const dueDate = dayjs(invoice.dueDate).format("DD/MM/YYYY");
+    // const invoiceMonth = dayjs(invoice.invoiceMonth).format("MM/YYYY");
+    // const dueDate = dayjs(invoice.dueDate).format("DD/MM/YYYY");
+    console.log("invoice.invoiceMonth", invoice.invoiceMonth); //trả ra là 06/2025
 
     return `
       <!DOCTYPE html>
@@ -625,23 +712,16 @@ const BillPage: React.FC = () => {
           <table>
             <tr>
               <th style="width: 30%;">Thông tin phòng:</th>
-              <td>${invoice.roomNumber || ""} (Tầng ${
-      invoice.floorNumber || ""
-    }, Tòa ${invoice.buildingName || ""})</td>
+              <td>${invoice.roomNumber || ""} (Tầng ${invoice.floorNumber || ""}, Tòa ${invoice.buildingName || ""})</td>
             </tr>
-            <tr>
-              <th>Sinh viên:</th>
-              <td>${invoice.fullName || "Chưa có sinh viên"} ${
-      invoice.studentCode ? `(${invoice.studentCode})` : ""
-    }</td>
-            </tr>
+            
             <tr>
               <th>Kỳ hóa đơn:</th>
-              <td>${invoiceMonth}</td>
+              <td>${invoice.invoiceMonth}</td>
             </tr>
             <tr>
               <th>Ngày đến hạn:</th>
-              <td>${dueDate}</td>
+              <td>${invoice.dueDate}</td>
             </tr>
             <tr>
               <th>Trạng thái:</th>
@@ -658,7 +738,7 @@ const BillPage: React.FC = () => {
                 ? `
             <tr>
               <th>Ngày thanh toán:</th>
-              <td>${dayjs(invoice.paymentDate).format("DD/MM/YYYY")}</td>
+              <td>${invoice.paymentDate}</td>
             </tr>`
                 : ""
             }
@@ -784,7 +864,7 @@ const BillPage: React.FC = () => {
 
   // Apply filters
   const applyFilters = () => {
-    fetchInvoices(1, pagination.pageSize);
+    fetchInvoices(page, limit);
   };
 
   // Reset filters
@@ -793,29 +873,18 @@ const BillPage: React.FC = () => {
     setStatusFilter("all");
     setBuildingFilter(null);
     setDateRange([null, null]);
-    fetchInvoices(1, pagination.pageSize);
+    setPage(1);
+    setLimit(10);
   };
 
   // Handle table pagination change
   const handleTableChange = (pagination: any) => {
-    fetchInvoices(pagination.current, pagination.pageSize);
+    setPage(pagination.current);
+    setLimit(pagination.pageSize);
   };
 
-  const getStatusStats = () => {
-    const stats = {
-      total: invoices.length,
-      paid: invoices.filter((inv) => inv.paymentStatus === "paid").length,
-      pending: invoices.filter((inv) => inv.paymentStatus === "pending").length,
-      overdue: invoices.filter((inv) => inv.paymentStatus === "overdue").length,
-      waiting_for_approval: invoices.filter(
-        (inv) => inv.paymentStatus === "waiting_for_approval"
-      ).length,
-    };
-
-    return stats;
-  };
-
-  const stats = getStatusStats();
+  // Thay thế stats = getStatusStats() bằng invoiceStats
+  const stats = invoiceStats;
 
   // Define table columns
   const columns = [
@@ -836,16 +905,16 @@ const BillPage: React.FC = () => {
         </span>
       ),
     },
-    {
-      title: "Sinh viên",
-      key: "student",
-      render: (_: unknown, record: Invoice) => (
-        <span>
-          {record.fullName ? record.fullName : "Chưa có sinh viên"}
-          {record.studentCode && ` (${record.studentCode})`}
-        </span>
-      ),
-    },
+    // {
+    //   title: "Sinh viên",
+    //   key: "student",
+    //   render: (_: unknown, record: Invoice) => (
+    //     <span>
+    //       {record.fullName ? record.fullName : "Chưa có sinh viên"}
+    //       {record.studentCode && ` (${record.studentCode})`}
+    //     </span>
+    //   ),
+    // },
     {
       title: "Kỳ hóa đơn",
       dataIndex: "invoiceMonth",
@@ -954,14 +1023,52 @@ const BillPage: React.FC = () => {
     },
   ];
 
+  // Hàm fetch lại thống kê tổng
+  const fetchInvoiceStats = async () => {
+    const res = await invoiceApi.getInvoiceStats();
+    if (res.success) setInvoiceStats(res.data);
+  };
+
+  // Thêm hàm xuất excel
+  const exportToExcel = () => {
+    // Chuyển đổi dữ liệu hóa đơn sang định dạng phù hợp
+    const dataToExport = filteredInvoices.map((invoice) => ({
+      "Mã hóa đơn": invoice.invoiceNumber,
+      "Phòng": invoice.roomNumber,
+      "Tầng": invoice.floorNumber,
+      "Tòa": invoice.buildingName,
+      "Kỳ hóa đơn": invoice.invoiceMonth,
+      "Ngày đến hạn": invoice.dueDate,
+      "Tổng tiền": invoice.totalAmount,
+      "Trạng thái": statusText[invoice.paymentStatus] || invoice.paymentStatus,
+     
+      "Số điện": invoice.electricity,
+      "Số nước": invoice.water,
+      "Tiền phòng": invoice.roomFee,
+      "Tiền điện": invoice.electricFee,
+      "Tiền nước": invoice.waterFee,
+      "Phí dịch vụ": invoice.serviceFee,
+      "Ngày thanh toán": invoice.paymentDate || "",
+      "Phương thức thanh toán": invoice.paymentMethod || "",
+    }));
+
+    // Tạo worksheet và workbook
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Hóa đơn");
+
+    // Xuất file
+    XLSX.writeFile(workbook, "danh_sach_hoa_don.xlsx");
+  };
+
   return (
-    <div className="bill-page p-6">
-      <Card>
-        <Title level={2}>Quản lý hóa đơn</Title>
+    <div className="bill-page p-2 sm:p-4 md:p-6">
+      <Card className="rounded-lg shadow-sm">
+        <Title level={2} className="text mb-4 text-lg md:text-2xl">Quản lý hóa đơn</Title>
 
         <Row gutter={[16, 16]} className="mb-4">
-          <Col xs={24} sm={24} md={6}>
-            <Card className="text-center">
+          <Col xs={24} sm={12} md={6} className="mb-2">
+            <Card className="text-center rounded-lg">
               <Statistic
                 title="Tổng số hóa đơn"
                 value={stats.total}
@@ -969,80 +1076,62 @@ const BillPage: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={8} md={6}>
+          <Col xs={24} sm={12} md={6} className="mb-2">
             <Card
-              className="text-center"
+              className="text-center rounded-lg"
               style={{ backgroundColor: "#f6ffed", borderColor: "#b7eb8f" }}
             >
               <Statistic
                 title="Đã thanh toán"
                 value={stats.paid}
                 valueStyle={{ color: "#52c41a" }}
-                suffix={`(${
-                  stats.total > 0
-                    ? Math.round((stats.paid / stats.total) * 100)
-                    : 0
-                }%)`}
+                suffix={`(${stats.total > 0 ? Math.round((stats.paid / stats.total) * 100) : 0}%)`}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={8} md={6}>
+          <Col xs={24} sm={12} md={6} className="mb-2">
             <Card
-              className="text-center"
+              className="text-center rounded-lg"
               style={{ backgroundColor: "#fff7e6", borderColor: "#ffd591" }}
             >
               <Statistic
                 title="Chờ thanh toán"
                 value={stats.pending}
                 valueStyle={{ color: "#fa8c16" }}
-                suffix={`(${
-                  stats.total > 0
-                    ? Math.round((stats.pending / stats.total) * 100)
-                    : 0
-                }%)`}
+                suffix={`(${stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}%)`}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={8} md={6}>
+          <Col xs={24} sm={12} md={6} className="mb-2">
             <Card
-              className="text-center"
+              className="text-center rounded-lg"
               style={{ backgroundColor: "#fff1f0", borderColor: "#ffa39e" }}
             >
               <Statistic
                 title="Quá hạn"
                 value={stats.overdue}
                 valueStyle={{ color: "#f5222d" }}
-                suffix={`(${
-                  stats.total > 0
-                    ? Math.round((stats.overdue / stats.total) * 100)
-                    : 0
-                }%)`}
+                suffix={`(${stats.total > 0 ? Math.round((stats.overdue / stats.total) * 100) : 0}%)`}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={8} md={6}>
+          <Col xs={24} sm={12} md={6} className="mb-2">
             <Card
-              className="text-center"
+              className="text-center rounded-lg"
               style={{ backgroundColor: "#fff7e6", borderColor: "#ffd591" }}
             >
               <Statistic
                 title="Chờ duyệt"
                 value={stats.waiting_for_approval}
                 valueStyle={{ color: "#fa8c16" }}
-                suffix={`(${
-                  stats.total > 0
-                    ? Math.round(
-                        (stats.waiting_for_approval / stats.total) * 100
-                      )
-                    : 0
-                }%)`}
+                suffix={`(${stats.total > 0 ? Math.round((stats.waiting_for_approval / stats.total) * 100) : 0}%)`}
               />
             </Card>
           </Col>
         </Row>
 
-        <Row gutter={16} className="mb-4">
-          <Col xs={24} sm={12} md={8} lg={6}>
+        <Row gutter={[12, 12]} className="mb-4">
+          <Col xs={24} sm={12} md={6} lg={6} className="mb-2">
             <Input
               placeholder="Tìm theo mã hóa đơn, phòng, sinh viên..."
               prefix={<SearchOutlined />}
@@ -1052,7 +1141,7 @@ const BillPage: React.FC = () => {
               className="w-full"
             />
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={6} lg={6} className="mb-2">
             <Select
               placeholder="Lọc theo trạng thái"
               onChange={handleStatusFilterChange}
@@ -1065,7 +1154,7 @@ const BillPage: React.FC = () => {
               <Option value="overdue">Quá hạn</Option>
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={6} lg={6} className="mb-2">
             <Select
               placeholder="Lọc theo tòa nhà"
               onChange={handleBuildingFilterChange}
@@ -1080,10 +1169,7 @@ const BillPage: React.FC = () => {
               ))}
             </Select>
           </Col>
-        </Row>
-
-        <Row gutter={16} className="mb-4">
-          <Col xs={24} sm={12} md={12} lg={12}>
+          <Col xs={24} sm={12} md={6} lg={6} className="mb-2">
             <DatePicker.RangePicker
               placeholder={["Từ ngày", "Đến ngày"]}
               format={DATE_FORMAT}
@@ -1094,39 +1180,50 @@ const BillPage: React.FC = () => {
               value={dateRange}
             />
           </Col>
-          <Col xs={24} sm={12} md={12} lg={12} className="text-right">
-            <Space>
-              <Button type="primary" onClick={applyFilters}>
+        </Row>
+
+        <Row gutter={[8, 8]} className="mb-4">
+          <Col xs={24} className="flex flex-wrap gap-2 justify-end">
+            <Space wrap size={[8, 8]}>
+              <Button type="primary" onClick={applyFilters} className="min-w-[110px]">
                 Áp dụng bộ lọc
               </Button>
-              <Button onClick={resetFilters}>Đặt lại</Button>
+              <Button onClick={resetFilters} className="min-w-[90px]">Đặt lại</Button>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={showCreateModal}
+                className="min-w-[120px]"
               >
                 Tạo hóa đơn
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={() => fetchInvoices()}>
+              <Button icon={<ReloadOutlined />} onClick={() => fetchInvoices()} className="min-w-[90px]">
                 Làm mới
+              </Button>
+              <Button onClick={exportToExcel} icon={<FileTextOutlined />} className="min-w-[110px]">
+                Xuất Excel
               </Button>
             </Space>
           </Col>
         </Row>
 
-        <Table
-          dataSource={filteredInvoices}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            ...pagination,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng cộng ${total} hóa đơn`,
-          }}
-          onChange={handleTableChange}
-          scroll={{ x: "max-content" }}
-        />
+        <div className="overflow-x-hidden rounded-lg border border-gray-200 bg-white">
+          <Table
+            dataSource={filteredInvoices}
+            columns={columns}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              ...pagination,
+              position: ["bottomLeft"],
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng cộng ${total} hóa đơn`,
+            }}
+            onChange={handleTableChange}
+            scroll={{ x: 900 }}
+            className="min-w-[600px]"
+          />
+        </div>
       </Card>
 
       {/* Invoice Form Modal */}
@@ -1135,8 +1232,10 @@ const BillPage: React.FC = () => {
         open={isModalVisible}
         onCancel={handleCancel}
         onOk={handleSubmit}
-        width={700}
+        width={window.innerWidth < 600 ? '98vw' : 700}
         destroyOnClose
+        bodyStyle={{ padding: 12 }}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical" requiredMark="optional">
           <Row gutter={16}>
@@ -1264,7 +1363,8 @@ const BillPage: React.FC = () => {
         title="Chi tiết hóa đơn"
         open={isDetailModalVisible}
         onCancel={handleDetailCancel}
-        width={700}
+        width={window.innerWidth < 600 ? '98vw' : 700}
+        style={{ top: 20 }}
         footer={[
           <Button key="close" onClick={handleDetailCancel}>
             Đóng
@@ -1278,6 +1378,7 @@ const BillPage: React.FC = () => {
             In hóa đơn
           </Button>,
         ]}
+        bodyStyle={{ padding: 12 }}
       >
         {selectedInvoice ? (
           <div>

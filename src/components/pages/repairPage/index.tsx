@@ -39,7 +39,7 @@ import debounce from "lodash/debounce";
 import buildingApi from "@/api/building";
 import dayjs from "dayjs";
 import MaintenanceDetailModal from "./MaintenanceDetailModal";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import maintenanceApi from "@/api/maintenance";
 import roomApi from "@/api/room";
 import { convertToJpg, getBase64 } from "@/utils/common";
@@ -69,17 +69,34 @@ interface MaintenanceRequest {
 }
 
 const RepairPage: React.FC = () => {
-  const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
-  const [buildingFilter, setBuildingFilter] = useState<number | undefined>(undefined);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Đọc tham số từ URL
+  const getParamValue = useCallback(
+    (key: string, defaultValue: string = "") => {
+      const value = searchParams.get(key);
+      return value !== null ? value : defaultValue;
+    },
+    [searchParams]
+  );
+
+  // Đổi state searchText và thêm state inputValue
+  const [searchText, setSearchText] = useState(getParamValue("search"));
+  const [inputValue, setInputValue] = useState(getParamValue("search"));
+  const [statusFilter, setStatusFilter] = useState(getParamValue("status"));
+  const [priorityFilter, setPriorityFilter] = useState(getParamValue("priority"));
+  const [buildingFilter, setBuildingFilter] = useState<number | undefined>(
+    searchParams.has("building") ? Number(getParamValue("building")) : undefined
+  );
+  const [page, setPage] = useState(Number(getParamValue("page", "1")));
+  const [limit, setLimit] = useState(Number(getParamValue("limit", "2")));
+  
   const [isLoading, setIsLoading] = useState(true);
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
   const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
+    current: page,
+    pageSize: limit,
     total: 0,
   });
 
@@ -93,10 +110,35 @@ const RepairPage: React.FC = () => {
   const [previewImage, setPreviewImage] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
-  const router = useRouter();
 
   const [rooms, setRooms] = useState<{ id: number; roomNumber: string }[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(null);
+
+  // Thêm useEffect để debounce searchText khi inputValue thay đổi
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchText(inputValue);
+      setPage(1); // Reset về trang 1 khi search
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [inputValue]);
+
+  // Cập nhật URL params
+  const updateUrlParams = useCallback(() => {
+    const params = new URLSearchParams();
+    
+    if (searchText) params.set("search", searchText);
+    if (statusFilter) params.set("status", statusFilter);
+    if (priorityFilter) params.set("priority", priorityFilter);
+    if (buildingFilter) params.set("building", buildingFilter.toString());
+    if (page > 1) params.set("page", page.toString());
+    if (limit !== 10) params.set("limit", limit.toString());
+    
+    const queryString = params.toString();
+    const url = queryString ? `?${queryString}` : "";
+    
+    router.push(`/quan-ly-bao-tri${url}`, { scroll: false });
+  }, [searchText, statusFilter, priorityFilter, buildingFilter, page, limit, router]);
 
   // Fetch maintenance requests
   const fetchMaintenanceRequests = useCallback(async () => {
@@ -162,24 +204,25 @@ const RepairPage: React.FC = () => {
     }
   }, []);
 
+  // Đồng bộ URL params khi state thay đổi
+  useEffect(() => {
+    updateUrlParams();
+  }, [searchText, statusFilter, priorityFilter, buildingFilter, page, limit, updateUrlParams]);
+
+  // Tải dữ liệu khi tham số thay đổi
   useEffect(() => {
     fetchMaintenanceRequests();
   }, [fetchMaintenanceRequests]);
 
-  const debouncedSearch = useCallback(
-    debounce((value) => {
-      setSearchText(value);
-      setPage(1); // Reset to first page when searching
-    }, 500),
-    []
-  );
-
+  // Sửa lại hàm handleSearch để chỉ cập nhật inputValue
   const handleSearch = (value: string) => {
-    debouncedSearch(value);
+    setInputValue(value);
   };
 
+  // Sửa lại resetFilters để reset cả inputValue
   const resetFilters = () => {
     setSearchText("");
+    setInputValue("");
     setStatusFilter("");
     setPriorityFilter("");
     setBuildingFilter(undefined);
@@ -501,11 +544,15 @@ const RepairPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Card title="Quản lý bảo trì" className="mb-6">
+      <Card 
+        title={<div className="text-2xl font-bold">Quản lý bảo trì</div>}
+        className="mb-6"
+      >
         <div className="mb-4 flex flex-wrap gap-4">
           <Input
             placeholder="Tìm kiếm theo mã, phòng, mô tả..."
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setInputValue(e.target.value)}
+            value={inputValue}
             style={{ width: 250 }}
             prefix={<SearchOutlined />}
             allowClear

@@ -233,43 +233,49 @@ const BuildingPage: React.FC = () => {
   ];
 
   return (
-    <div className="building-page">
-      <Card>
+    <div className="building-page p-2 sm:p-4 md:p-6">
+      <Card className="rounded-lg shadow-sm">
         <Row
           justify="space-between"
           align="middle"
-          style={{ marginBottom: 16 }}
+          className="mb-4 flex-col gap-2 md:flex-row"
         >
-          <Col>
-            <Title level={2}>Quản lý tòa nhà</Title>
+          <Col className="mb-2 md:mb-0">
+            <Title level={2} className="text-lg md:text-2xl text-center md:text-left mb-0">Quản lý tòa nhà</Title>
           </Col>
-          <Col>
-            <Space>
+          <Col className="flex flex-wrap gap-2 justify-end">
+            <Space wrap size={[8, 8]}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => handleOpenModal()}
+                className="min-w-[120px]"
               >
                 Thêm tòa nhà
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={fetchBuildings}>
+              <Button icon={<ReloadOutlined />} onClick={fetchBuildings} className="min-w-[90px]">
                 Làm mới
               </Button>
             </Space>
           </Col>
         </Row>
 
-        <Table
-          dataSource={buildings}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng cộng ${total} tòa nhà`,
-          }}
-        />
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+          <Table
+            dataSource={buildings}
+            columns={columns}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng cộng ${total} tòa nhà`,
+              position: ["bottomLeft"],
+            }}
+            scroll={{ x: 900 }}
+            className="min-w-[600px]"
+          />
+        </div>
       </Card>
 
       {/* Modal for adding/editing buildings */}
@@ -280,6 +286,9 @@ const BuildingPage: React.FC = () => {
         onOk={handleFormSubmit}
         okText={editingBuilding ? "Cập nhật" : "Thêm mới"}
         cancelText="Hủy"
+        width={typeof window !== 'undefined' && window.innerWidth < 600 ? '98vw' : 600}
+        bodyStyle={{ padding: 12 }}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical" requiredMark="optional">
           <Form.Item

@@ -82,7 +82,15 @@ const invoiceApi = {
   }): Promise<InvoiceResponse> => {
     try {
       const response = await axiosClient.get(`${API_URL}/invoices`, {
-        params
+        params: {
+          page: params?.page,
+          limit: params?.limit,
+          status: params?.status,
+          buildingId: params?.buildingId,
+          search: params?.search,
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        }
       });
       return response.data;
     } catch (error) {
@@ -250,6 +258,35 @@ const invoiceApi = {
             totalPages: 0
           }
         }
+      };
+    }
+  },
+
+  // Lấy thống kê số lượng hóa đơn theo trạng thái
+  getInvoiceStats: async (): Promise<{
+    success: boolean;
+    data: {
+      total: number;
+      pending: number;
+      paid: number;
+      overdue: number;
+      waiting_for_approval: number;
+    };
+  }> => {
+    try {
+      const response = await axiosClient.get(`/api/invoices-stats`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching invoice stats:", error);
+      return {
+        success: false,
+        data: {
+          total: 0,
+          pending: 0,
+          paid: 0,
+          overdue: 0,
+          waiting_for_approval: 0,
+        },
       };
     }
   },

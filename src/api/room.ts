@@ -9,6 +9,7 @@ export interface RoomFilters {
   availability?: 'available' | 'full';
   page?: number;
   limit?: number;
+  building?: string;
 }
 
 export interface Room {

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   Table,
@@ -36,6 +36,8 @@ import {
   CheckOutlined,
   ManOutlined,
   WomanOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import debounce from "lodash/debounce";
 import roomApi, { RoomFilters, Room, RoomResponse } from "@/api/room";
@@ -58,13 +60,23 @@ const { Option } = Select;
 
 const DormitoryRoomManagement = () => {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [searchText, setSearchText] = useState("");
-  const [buildingFilter, setBuildingFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [availabilityFilter, setAvailabilityFilter] = useState("");
+  const searchParams = useSearchParams();
+  
+  // Đọc các tham số từ URL
+  const getParamFromUrl = (paramName: string, defaultValue: any) => {
+    const value = searchParams.get(paramName);
+    return value ? (paramName === 'page' || paramName === 'limit' ? parseInt(value) : value) : defaultValue;
+  };
+  
+  // Khởi tạo state từ URL params
+  const [page, setPage] = useState(getParamFromUrl("page", 1));
+  const [limit, setLimit] = useState(getParamFromUrl("limit", 10));
+  const [inputValue, setInputValue] = useState(getParamFromUrl("search", "")); // State riêng cho input
+  const [searchText, setSearchText] = useState(getParamFromUrl("search", "")); // State cho filter thực tế
+  const [buildingFilter, setBuildingFilter] = useState(getParamFromUrl("building", ""));
+  const [typeFilter, setTypeFilter] = useState(getParamFromUrl("type", ""));
+  const [statusFilter, setStatusFilter] = useState(getParamFromUrl("status", ""));
+  const [availabilityFilter, setAvailabilityFilter] = useState(getParamFromUrl("availability", ""));
   const [viewMode, setViewMode] = useState("table");
   const [addRoomModalVisible, setAddRoomModalVisible] = useState(false);
   const [editRoomModalVisible, setEditRoomModalVisible] = useState(false);
@@ -81,11 +93,52 @@ const DormitoryRoomManagement = () => {
     limit: 10,
   });
 
+  // Cập nhật URL khi các filter thay đổi
+  const updateURL = useCallback(() => {
+    const url = new URL(window.location.href);
+    
+    // Xóa tất cả params hiện tại
+    url.searchParams.delete('page');
+    url.searchParams.delete('limit');
+    url.searchParams.delete('search');
+    url.searchParams.delete('building');
+    url.searchParams.delete('type');
+    url.searchParams.delete('status');
+    url.searchParams.delete('availability');
+    
+    // Thêm lại các params mới
+    if (page > 1) url.searchParams.set('page', page.toString());
+    if (limit !== 10) url.searchParams.set('limit', limit.toString());
+    if (searchText) url.searchParams.set('search', searchText);
+    if (buildingFilter) url.searchParams.set('building', buildingFilter);
+    if (typeFilter) url.searchParams.set('type', typeFilter);
+    if (statusFilter) url.searchParams.set('status', statusFilter);
+    if (availabilityFilter) url.searchParams.set('availability', availabilityFilter);
+    
+    // Cập nhật URL không làm refresh trang
+    window.history.pushState({}, '', url.toString());
+  }, [page, limit, searchText, buildingFilter, typeFilter, statusFilter, availabilityFilter]);
+  
+  // Đồng bộ URL với state
+  useEffect(() => {
+    updateURL();
+  }, [updateURL]);
+
+  // Debounce: khi inputValue đổi, sau 500ms mới setSearchText
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchText(inputValue);
+      setPage(1); // Reset về trang 1 khi search
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [inputValue]);
+
   // Cập nhật filters khi các giá trị liên quan thay đổi
   useEffect(() => {
     setFilters({
       searchText,
       buildingName: buildingFilter,
+      building: buildingFilter,
       type:
         typeFilter === "nam"
           ? "male"
@@ -97,17 +150,9 @@ const DormitoryRoomManagement = () => {
       page,
       limit,
     });
-  }, [
-    searchText,
-    buildingFilter,
-    typeFilter,
-    statusFilter,
-    availabilityFilter,
-    page,
-    limit,
-  ]);
+  }, [searchText, buildingFilter, typeFilter, statusFilter, availabilityFilter, page, limit]);
 
-  // Fetch rooms data
+  // Fetch rooms data with useCallback
   const fetchRooms = useCallback(async (filterParams: RoomFilters) => {
     try {
       setIsLoading(true);
@@ -160,16 +205,34 @@ const DormitoryRoomManagement = () => {
     fetchBuildings();
   }, []);
 
-  const debouncedSearch = useCallback(
-    debounce((value) => {
-      setSearchText(value);
-      setPage(1); // Reset to first page when searching
-    }, 500),
-    []
-  );
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value); // Cập nhật giá trị input ngay lập tức
+  };
 
   const handleSearch = (value: string) => {
-    debouncedSearch(value);
+    setInputValue(value);
+  };
+
+  // Cập nhật các hàm xử lý filter
+  const handleBuildingFilterChange = (value: string) => {
+    setBuildingFilter(value);
+    setPage(1);
+  };
+
+  const handleTypeFilterChange = (value: string) => {
+    setTypeFilter(value);
+    setPage(1);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  const handleAvailabilityFilterChange = (value: string) => {
+    setAvailabilityFilter(value);
+    setPage(1);
   };
 
   const handleViewDetail = (id: number) => {
@@ -335,12 +398,46 @@ const DormitoryRoomManagement = () => {
   }, [selectedRoom, editRoomModalVisible, editForm]);
 
   const resetFilters = () => {
-    setSearchText("");
+    setInputValue("");
     setBuildingFilter("");
     setTypeFilter("");
     setStatusFilter("");
     setAvailabilityFilter("");
     setPage(1);
+  };
+
+  const handleDeleteRoom = (room: Room) => {
+    Modal.confirm({
+      title: <span className="text-lg font-bold text-red-600 flex items-center gap-2"><ExclamationCircleOutlined style={{ fontSize: 28, color: '#faad14' }} /> Xác nhận xoá phòng {room.roomNumber}</span>,
+      icon: null,
+      content: <span className="text-base">Bạn có chắc chắn muốn xoá phòng <b>{room.roomNumber}</b> không? Hành động này không thể hoàn tác.</span>,
+      okText: "Xoá",
+      okType: "danger",
+      cancelText: "Huỷ",
+      async onOk() {
+        try {
+          notification.open({
+            message: "Đang xoá...",
+            description: `Đang xoá phòng ${room.roomNumber}`,
+            duration: 0,
+            key: "deleteRoom"
+          });
+          await roomApi.deleteRoom(room.id);
+          notification.success({
+            message: "Xoá thành công",
+            description: `Đã xoá phòng ${room.roomNumber}`,
+            key: "deleteRoom"
+          });
+          fetchRooms(filters);
+        } catch (error: any) {
+          notification.error({
+            message: "Lỗi",
+            description: error?.response?.data?.message || "Không thể xoá phòng. Vui lòng thử lại sau.",
+            key: "deleteRoom"
+          });
+        }
+      },
+    });
   };
 
   const columns = [
@@ -456,18 +553,32 @@ const DormitoryRoomManagement = () => {
           <Tooltip title="Xem chi tiết">
             <Button
               type="text"
+              shape="circle"
               icon={<EyeOutlined />}
               onClick={() => handleViewDetail(record.id)}
+              className="hover:bg-blue-50"
             />
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Button
               type="text"
+              shape="circle"
               icon={<EditOutlined />}
               onClick={() => {
                 setSelectedRoom(record);
                 setEditRoomModalVisible(true);
               }}
+              className="hover:bg-yellow-50"
+            />
+          </Tooltip>
+          <Tooltip title="Xoá phòng">
+            <Button
+              type="text"
+              shape="circle"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteRoom(record)}
+              className="hover:bg-red-50"
             />
           </Tooltip>
         </Space>
@@ -497,24 +608,15 @@ const DormitoryRoomManagement = () => {
             key={room.id}
             hoverable
             onClick={() => handleViewDetail(room.id)}
-            className="shadow-sm hover:shadow-md transition-shadow"
+            className="shadow-md hover:shadow-xl transition-shadow rounded-2xl border border-gray-100"
             cover={
-              <div className="h-32 bg-gray-100 flex flex-col justify-center items-center relative">
+              <div className="h-32 bg-gray-100 flex flex-col justify-center items-center relative rounded-t-2xl">
                 <HomeOutlined className="text-4xl text-blue-500" />
                 <div className="text-2xl font-bold mt-2">{room.roomNumber}</div>
-                {/* Hiển thị badge trạng thái ở góc trên bên phải */}
                 <div className="absolute top-2 right-2">
                   <Badge
-                    status={
-                      room.status === "available" || room.status === "active"
-                        ? "success"
-                        : "warning"
-                    }
-                    text={
-                      room.status === "available" || room.status === "active"
-                        ? "Hoạt động"
-                        : "Bảo trì"
-                    }
+                    status={room.status === "available" || room.status === "active" ? "success" : "warning"}
+                    text={room.status === "available" || room.status === "active" ? "Hoạt động" : "Bảo trì"}
                   />
                 </div>
               </div>
@@ -528,6 +630,7 @@ const DormitoryRoomManagement = () => {
                     e.stopPropagation();
                     handleViewDetail(room.id);
                   }}
+                  className="rounded-full hover:bg-blue-50"
                 >
                   Xem chi tiết
                 </Button>
@@ -541,8 +644,23 @@ const DormitoryRoomManagement = () => {
                     setSelectedRoom(room);
                     setEditRoomModalVisible(true);
                   }}
+                  className="rounded-full hover:bg-yellow-50"
                 >
                   Chỉnh sửa
+                </Button>
+              </Tooltip>,
+              <Tooltip title="Xoá phòng" key="delete">
+                <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteRoom(room);
+                  }}
+                  className="rounded-full hover:bg-red-50"
+                >
+                  Xoá
                 </Button>
               </Tooltip>,
             ]}
@@ -581,7 +699,6 @@ const DormitoryRoomManagement = () => {
               </Tooltip>
             </div>
 
-            {/* Cải tiến thanh progress */}
             <div className="mb-3">
               <Tooltip
                 title={`${room.occupiedBeds} sinh viên đang ở / Sức chứa ${room.capacity} người`}
@@ -609,7 +726,6 @@ const DormitoryRoomManagement = () => {
                 </div>
               </Tooltip>
 
-              {/* Thêm text mô tả */}
               <div className="text-xs text-gray-500 mt-1 text-center">
                 {room.occupiedBeds >= room.capacity
                   ? "Phòng đã đầy"
@@ -617,7 +733,6 @@ const DormitoryRoomManagement = () => {
               </div>
             </div>
 
-            {/* Tiện ích với icon */}
             <div className="border-t pt-2">
               <div className="text-sm font-medium mb-1">Tiện ích:</div>
               <div className="flex flex-wrap gap-1">
@@ -645,11 +760,11 @@ const DormitoryRoomManagement = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Row gutter={16}>
-          <Col span={6}>
-            <Card className="shadow-sm">
+    <div className="p-2 sm:p-4 md:p-6">
+      <div className="mb-4">
+        <Row gutter={[12, 12]}>
+          <Col xs={24} sm={12} md={6} className="mb-2">
+            <Card className="shadow-sm rounded-lg">
               <Statistic
                 title="Tổng số phòng"
                 value={data?.summary?.totalRooms || 0}
@@ -657,8 +772,8 @@ const DormitoryRoomManagement = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card className="shadow-sm">
+          <Col xs={24} sm={12} md={6} className="mb-2">
+            <Card className="shadow-sm rounded-lg">
               <Statistic
                 title="Phòng còn trống"
                 value={data?.summary?.availableRooms || 0}
@@ -667,8 +782,8 @@ const DormitoryRoomManagement = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card className="shadow-sm">
+          <Col xs={24} sm={12} md={6} className="mb-2">
+            <Card className="shadow-sm rounded-lg">
               <Statistic
                 title="Phòng đang bảo trì"
                 value={data?.summary?.maintenanceRooms || 0}
@@ -677,8 +792,8 @@ const DormitoryRoomManagement = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card className="shadow-sm">
+          <Col xs={24} sm={12} md={6} className="mb-2">
+            <Card className="shadow-sm rounded-lg">
               <Statistic
                 title="Tỷ lệ lấp đầy"
                 value={data?.summary?.occupancyRate || 0}
@@ -696,116 +811,109 @@ const DormitoryRoomManagement = () => {
         </Row>
       </div>
 
-      <Card className="shadow-sm">
-        <div className="flex flex-wrap justify-between items-center mb-4">
-          <div className="text-2xl font-semibold mb-2 md:mb-0">
+      <Card className="shadow-sm rounded-lg">
+        {/* Hàng 1: Tiêu đề và nút thêm phòng */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2 w-full">
+          <div className="text-2xl font-bold text-gray-900 flex-shrink-0 text-center md:text-left">
             Quản lý phòng ký túc xá
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Input.Search
-              placeholder="Tìm phòng..."
-              allowClear
-              style={{ width: 200 }}
-              value={searchText}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-
-            <Select
-              placeholder="Tòa nhà"
-              allowClear
-              style={{ width: 120 }}
-              value={buildingFilter || undefined}
-              onChange={(value) => {
-                setBuildingFilter(value);
-                setPage(1);
-              }}
-            >
-              {buildings.map((building) => (
-                <Option key={building.id} value={building.name}>
-                  {building.name}
-                </Option>
-              ))}
-            </Select>
-
-            <Select
-              placeholder="Loại phòng"
-              allowClear
-              style={{ width: 120 }}
-              value={typeFilter || undefined}
-              onChange={(value) => {
-                setTypeFilter(value);
-                setPage(1);
-              }}
-            >
-              <Option value="nam">Nam</Option>
-              <Option value="nữ">Nữ</Option>
-            </Select>
-
-            <Select
-              placeholder="Trạng thái"
-              allowClear
-              style={{ width: 120 }}
-              value={statusFilter || undefined}
-              onChange={(value) => {
-                setStatusFilter(value);
-                setPage(1);
-              }}
-            >
-              <Option value="active">Hoạt động</Option>
-              <Option value="maintenance">Bảo trì</Option>
-            </Select>
-
-            <Select
-              placeholder="Tình trạng"
-              allowClear
-              style={{ width: 120 }}
-              value={availabilityFilter || undefined}
-              onChange={(value) => {
-                setAvailabilityFilter(value);
-                setPage(1);
-              }}
-            >
-              <Option value="available">Còn chỗ</Option>
-              <Option value="full">Đã đầy</Option>
-            </Select>
-
-            <Button icon={<ReloadOutlined />} onClick={resetFilters}>
-              Reset
-            </Button>
-          </div>
-        </div>
-
-        <div className="mb-4 flex justify-end items-center">
           <Button
             type="primary"
-            icon={<PlusOutlined />}
+            icon={<PlusOutlined style={{ fontSize: 18 }} />}
             onClick={handleAddRoom}
+            className="rounded-full shadow-md text-base font-semibold flex items-center gap-2 px-5"
+            // style={{ height: 44 }}
           >
             Thêm phòng mới
           </Button>
         </div>
+        {/* Hàng 2: Filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto justify-start md:justify-start mb-4">
+          <Input.Search
+            placeholder="Tìm phòng..."
+            allowClear
+            className="md:!w-64 sm:w-[200px] rounded-full"
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            onSearch={value => setInputValue(value)}
+          />
+          <Select
+            placeholder="Tòa nhà"
+            allowClear
+            className="w-full sm:w-[120px] rounded-full"
+            value={buildingFilter || undefined}
+            onChange={handleBuildingFilterChange}
+            style={{ borderRadius: 24 }}
+          >
+            {buildings.map((building) => (
+              <Option key={building.id} value={building.name}>
+                {building.name}
+              </Option>
+            ))}
+          </Select>
+          <Select
+            placeholder="Loại phòng"
+            allowClear
+            className="w-full sm:w-[120px] rounded-full"
+            value={typeFilter || undefined}
+            onChange={handleTypeFilterChange}
+            style={{ borderRadius: 24 }}
+          >
+            <Option value="nam">Nam</Option>
+            <Option value="nữ">Nữ</Option>
+          </Select>
+          <Select
+            placeholder="Trạng thái"
+            allowClear
+            className="w-full sm:w-[120px] rounded-full"
+            value={statusFilter || undefined}
+            onChange={handleStatusFilterChange}
+            style={{ borderRadius: 24 }}
+          >
+            <Option value="active">Hoạt động</Option>
+            <Option value="maintenance">Bảo trì</Option>
+          </Select>
+          <Select
+            placeholder="Tình trạng"
+            allowClear
+            className="w-full sm:w-[120px] rounded-full"
+            value={availabilityFilter || undefined}
+            onChange={handleAvailabilityFilterChange}
+            style={{ borderRadius: 24 }}
+          >
+            <Option value="available">Còn chỗ</Option>
+            <Option value="full">Đã đầy</Option>
+          </Select>
+          <Button icon={<ReloadOutlined />} onClick={resetFilters} className="min-w-[90px] rounded-full border border-gray-300 hover:border-blue-400">
+            Reset
+          </Button>
+        </div>
 
         {viewMode === "table" ? (
-          <Table
-            columns={columns as ColumnType<Room>[]}
-            dataSource={data?.data}
-            loading={isLoading}
-            rowKey="id"
-            scroll={{ x: 1300 }}
-            pagination={{
-              current: data?.pagination?.currentPage,
-              pageSize: data?.pagination?.itemsPerPage,
-              total: data?.pagination?.totalItems,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              pageSizeOptions: ["10", "20", "30", "50"],
-              onChange: (page, pageSize) => {
-                setPage(page);
-                setLimit(pageSize);
-              },
-            }}
-          />
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <Table
+              columns={columns as ColumnType<Room>[]}
+              dataSource={data?.data}
+              loading={isLoading}
+              rowKey="id"
+              scroll={{ x: 1300 }}
+              pagination={{
+                current: data?.pagination?.currentPage || page,
+                pageSize: data?.pagination?.itemsPerPage || limit,
+                total: data?.pagination?.totalItems,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                pageSizeOptions: ["10", "20", "30", "50"],
+                onChange: (newPage, newPageSize) => {
+                  setPage(newPage);
+                  setLimit(newPageSize);
+                },
+                position: ["bottomLeft"],
+              }}
+              className="min-w-[600px] text-center"
+              style={{ borderRadius: 16, overflow: 'hidden' }}
+            />
+          </div>
         ) : (
           <div>
             {renderCardView()}
@@ -841,7 +949,9 @@ const DormitoryRoomManagement = () => {
         onCancel={() => setAddRoomModalVisible(false)}
         okText="Thêm phòng"
         cancelText="Hủy"
-        width={600}
+        width={typeof window !== 'undefined' && window.innerWidth < 600 ? '98vw' : 600}
+        bodyStyle={{ padding: 12 }}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
@@ -962,9 +1072,11 @@ const DormitoryRoomManagement = () => {
         open={editRoomModalVisible}
         onOk={handleEditRoom}
         onCancel={() => setEditRoomModalVisible(false)}
-        width={600}
+        width={typeof window !== 'undefined' && window.innerWidth < 600 ? '98vw' : 600}
         okText="Cập nhật"
         cancelText="Hủy"
+        bodyStyle={{ padding: 12 }}
+        style={{ top: 20 }}
       >
         <Divider orientation="left">
           Thông tin phòng {selectedRoom?.roomNumber}

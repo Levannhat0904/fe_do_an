@@ -12,10 +12,23 @@ interface ContractData {
   status?: 'active' | 'expired' | 'terminated';
 }
 
+interface ContractQueryParams {
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
 interface ApiResponse<T> {
   success: boolean;
   message?: string;
   data: T;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
 }
 
 const contractApi = {
@@ -60,9 +73,16 @@ const contractApi = {
   },
 
   // Lấy tất cả hợp đồng
-  getAllContracts: async (): Promise<ApiResponse<any>> => {
+  getAllContracts: async (params?: ContractQueryParams): Promise<ApiResponse<any>> => {
     try {
-      const response = await axiosClient.get(`${API_URL}`);
+      const response = await axiosClient.get(`${API_URL}`, {
+        params: {
+          search: params?.search,
+          status: params?.status !== 'all' ? params?.status : undefined,
+          page: params?.page,
+          limit: params?.limit
+        }
+      });
       return response.data;
     } catch (error) {
       throw error;

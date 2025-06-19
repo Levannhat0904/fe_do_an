@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   Button,
@@ -37,6 +37,9 @@ import localizedFormat from "dayjs/plugin/localizedFormat";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { formatCurrency } from "@/utils/formatters";
 import { sendMail } from "@/api/sendmail";
+import { useRouter, useSearchParams } from "next/navigation";
+import debounce from "lodash/debounce";
+import * as XLSX from "xlsx";
 
 // Configure dayjs
 dayjs.extend(localizedFormat);
@@ -96,6 +99,14 @@ interface Room {
   pricePerMonth: number;
 }
 
+// Cập nhật interface FilterParams
+interface FilterParams {
+  search: string;
+  status: string;
+  page: number;
+  limit: number;
+}
+
 // Utility function to parse dates safely
 const parseDateString = (dateString: string): dayjs.Dayjs => {
   console.log("Parsing date:", dateString);
@@ -131,29 +142,156 @@ const parseDateString = (dateString: string): dayjs.Dayjs => {
 };
 
 const ContractPage: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Đọc các tham số từ URL
+  const getParamFromUrl = (paramName: string, defaultValue: any) => {
+    const value = searchParams.get(paramName);
+    return value ? (paramName === 'page' || paramName === 'limit' ? parseInt(value) : value) : defaultValue;
+  };
+  
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [pagination, setPagination] = useState<any>({
+    currentPage: 1,
+    totalPages: 0,
+    totalItems: 0,
+    itemsPerPage: 10
+  });
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchText, setSearchText] = useState<string>("");
+  const [searchText, setSearchText] = useState<string>(getParamFromUrl("search", ""));
+  const [inputValue, setInputValue] = useState<string>(getParamFromUrl("search", ""));
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [isDetailModalVisible, setIsDetailModalVisible] =
-    useState<boolean>(false);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState<boolean>(false);
   const [detailContract, setDetailContract] = useState<Contract | null>(null);
   const [form] = Form.useForm();
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  console.log("students", students);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(getParamFromUrl("status", "all"));
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
-  const [depositAmountFormatted, setDepositAmountFormatted] =
-    useState<string>("");
+  const [depositAmountFormatted, setDepositAmountFormatted] = useState<string>("");
   const [monthlyFeeFormatted, setMonthlyFeeFormatted] = useState<string>("");
+  const [page, setPage] = useState<number>(getParamFromUrl("page", 1));
+  const [limit, setLimit] = useState<number>(getParamFromUrl("limit", 10));
 
-  // Fetch contracts, students, rooms data
+  // Cập nhật URL khi tham số thay đổi
+  const updateURL = useCallback((search: string, status: string, currentPage: number, pageSize: number) => {
+    const url = new URL(window.location.href);
+    
+    // Xóa tham số hiện tại
+    url.searchParams.delete('search');
+    url.searchParams.delete('status');
+    url.searchParams.delete('page');
+    url.searchParams.delete('limit');
+    
+    // Thêm tham số mới nếu có giá trị
+    if (search) url.searchParams.set('search', search);
+    if (status && status !== 'all') url.searchParams.set('status', status);
+    if (currentPage > 1) url.searchParams.set('page', currentPage.toString());
+    if (pageSize !== 10) url.searchParams.set('limit', pageSize.toString());
+    
+    // Cập nhật URL mà không làm refresh trang
+    window.history.pushState({}, '', url.toString());
+  }, []);
+
+  // Áp dụng filter và cập nhật URL
+  const applyFilters = useCallback((newParams: Partial<FilterParams>) => {
+    const newSearch = newParams.search !== undefined ? newParams.search : searchText;
+    const newStatus = newParams.status !== undefined ? newParams.status : statusFilter;
+    const newPage = newParams.page !== undefined ? newParams.page : page;
+    const newLimit = newParams.limit !== undefined ? newParams.limit : limit;
+    
+    // Mọi thay đổi filter trừ page và limit đều reset page về 1
+    if ((newParams.search !== undefined || newParams.status !== undefined) && newParams.page === undefined) {
+      setPage(1);
+      updateURL(newSearch, newStatus, 1, newLimit);
+    } else {
+      // Cập nhật URL với các giá trị mới
+      updateURL(newSearch, newStatus, newPage, newLimit);
+    }
+    
+    // Cập nhật state
+    if (newParams.search !== undefined) {
+      setSearchText(newParams.search);
+    }
+    
+    if (newParams.status !== undefined) {
+      setStatusFilter(newParams.status);
+    }
+    
+    if (newParams.page !== undefined) {
+      setPage(newParams.page);
+    }
+    
+    if (newParams.limit !== undefined) {
+      setLimit(newParams.limit);
+    }
+  }, [searchText, statusFilter, page, limit, updateURL]);
+  
+  // Gọi lại API khi search, status, page hoặc limit thay đổi
+  const fetchContracts = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Gửi tham số search, status, page và limit lên API
+      const response = await contractApi.getAllContracts({
+        search: searchText,
+        status: statusFilter,
+        page,
+        limit
+      });
+      if (response.success) {
+        console.log("Original contract data:", response.data[0]); // Log for debugging
+
+        const formattedContracts = response.data.map((contract: Contract) => {
+          // Format dates properly using dayjs
+          const startDate = parseDateString(contract.startDate).format(
+            DATE_FORMAT
+          );
+          const endDate = parseDateString(contract.endDate).format(DATE_FORMAT);
+
+          return {
+            ...contract,
+            key: contract.id,
+            startDate,
+            endDate,
+          };
+        });
+        console.log("Formatted contract data:", formattedContracts[0]); // Log for debugging
+        setContracts(formattedContracts);
+
+        // Lưu thông tin phân trang từ response
+        if (response.pagination) {
+          console.log("Pagination info:", response.pagination);
+          setPagination(response.pagination);
+        }
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể tải hợp đồng.",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể tải hợp đồng.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [searchText, statusFilter, page, limit]);
+
+  // Gọi API khi component mount hoặc khi các dependencies của fetchContracts thay đổi
   useEffect(() => {
     fetchContracts();
-  }, []);
+  }, [fetchContracts]);
+
+  // Khởi tạo URL từ searchParams khi component mount và khi filter thay đổi
+  useEffect(() => {
+    updateURL(searchText, statusFilter, page, limit);
+  }, [searchText, statusFilter, page, limit, updateURL]);
 
   // Cập nhật danh sách sinh viên và phòng sau khi có dữ liệu hợp đồng
   useEffect(() => {
@@ -214,46 +352,6 @@ const ContractPage: React.FC = () => {
       setMonthlyFeeFormatted(
         formatCurrency(Number(selectedRoom.pricePerMonth))
       );
-    }
-  };
-
-  const fetchContracts = async () => {
-    try {
-      setLoading(true);
-      const response = await contractApi.getAllContracts();
-      if (response.success) {
-        console.log("Original contract data:", response.data[0]); // Log for debugging
-
-        const formattedContracts = response.data.map((contract: Contract) => {
-          // Format dates properly using dayjs
-          const startDate = parseDateString(contract.startDate).format(
-            DATE_FORMAT
-          );
-          const endDate = parseDateString(contract.endDate).format(DATE_FORMAT);
-
-          return {
-            ...contract,
-            key: contract.id,
-            startDate,
-            endDate,
-          };
-        });
-        console.log("Formatted contract data:", formattedContracts[0]); // Log for debugging
-        setContracts(formattedContracts);
-      } else {
-        notification.error({
-          message: "Lỗi",
-          description: "Không thể tải hợp đồng.",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching contracts:", error);
-      notification.error({
-        message: "Lỗi",
-        description: "Không thể tải hợp đồng.",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -337,34 +435,26 @@ const ContractPage: React.FC = () => {
     }
   };
 
-  const handleSearch = (value: string) => {
-    setSearchText(value);
+  const debouncedSearch = useCallback(
+    debounce((value: string) => {
+      applyFilters({ search: value });
+    }, 500),
+    [applyFilters]
+  );
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+    debouncedSearch(value);
+  };
+
+  const handleSearchButtonClick = (value: string) => {
+    applyFilters({ search: value });
   };
 
   const handleStatusFilter = (value: string) => {
-    setStatusFilter(value);
+    applyFilters({ status: value });
   };
-
-  const filteredContracts = contracts.filter((contract) => {
-    const matchesSearch =
-      (contract.contractNumber &&
-        contract.contractNumber
-          .toLowerCase()
-          .includes(searchText.toLowerCase())) ||
-      (contract.studentCode &&
-        contract.studentCode
-          .toLowerCase()
-          .includes(searchText.toLowerCase())) ||
-      (contract.fullName &&
-        contract.fullName.toLowerCase().includes(searchText.toLowerCase())) ||
-      (contract.roomNumber &&
-        contract.roomNumber.toLowerCase().includes(searchText.toLowerCase()));
-
-    const matchesStatus =
-      statusFilter === "all" || contract.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
 
   const showModal = (contract: Contract | null = null) => {
     setEditingContract(contract);
@@ -591,8 +681,7 @@ const ContractPage: React.FC = () => {
       title: "Mã hợp đồng",
       dataIndex: "contractNumber",
       key: "contractNumber",
-      sorter: (a: Contract, b: Contract) =>
-        a.contractNumber.localeCompare(b.contractNumber),
+      
     },
     {
       title: "Sinh viên",
@@ -621,7 +710,7 @@ const ContractPage: React.FC = () => {
       key: "monthlyFee",
       render: (fee: number) =>
         fee ? `${Number(fee).toLocaleString("vi-VN")} VNĐ` : "",
-      sorter: (a: Contract, b: Contract) => a.monthlyFee - b.monthlyFee,
+   
     },
     {
       title: "Trạng thái",
@@ -705,27 +794,62 @@ const ContractPage: React.FC = () => {
     }
   };
 
-  return (
-    <div className="contract-page">
-      <Card>
-        <Title level={2}>Quản lý hợp đồng</Title>
+  // Thêm hàm xuất excel
+  const exportToExcel = () => {
+    // Chuyển đổi dữ liệu hợp đồng sang định dạng phù hợp
+    const dataToExport = contracts.map((contract) => ({
+      "Mã hợp đồng": contract.contractNumber,
+      "Tên sinh viên": contract.fullName,
+      "Mã sinh viên": contract.studentCode,
+      "Phòng": contract.roomNumber,
+      "Tầng": contract.floorNumber,
+      "Tòa": contract.buildingName,
+      "Ngày bắt đầu": contract.startDate,
+      "Ngày kết thúc": contract.endDate,
+      "Tiền đặt cọc": contract.depositAmount,
+      "Phí hàng tháng": contract.monthlyFee,
+      "Trạng thái":
+        contract.status === "active"
+          ? "Đang hiệu lực"
+          : contract.status === "expired"
+          ? "Hết hạn"
+          : contract.status === "terminated"
+          ? "Đã hủy"
+          : contract.status,
+    }));
 
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Input
+    // Tạo worksheet và workbook
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Hợp đồng");
+
+    // Xuất file
+    XLSX.writeFile(workbook, "danh_sach_hop_dong.xlsx");
+  };
+
+  return (
+    <div className="contract-page p-2 sm:p-4 md:p-6">
+      <Card className="rounded-lg shadow-sm">
+        <Title level={2} className=" mb-4 text-lg md:text-2xl">Quản lý hợp đồng</Title>
+
+        <Row gutter={[12, 12]} className="mb-4">
+          <Col xs={24} sm={12} md={6} lg={6} className="mb-2">
+            <Input.Search
               placeholder="Tìm theo mã HĐ, mã SV, tên SV, phòng..."
-              value={searchText}
-              onChange={(e) => handleSearch(e.target.value)}
-              prefix={<SearchOutlined />}
+              value={inputValue}
+              onChange={handleSearchInputChange}
+              onSearch={handleSearchButtonClick}
               allowClear
+              className="w-full"
             />
           </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={6} lg={6} className="mb-2">
             <Select
               style={{ width: "100%" }}
               placeholder="Lọc theo trạng thái"
               value={statusFilter}
               onChange={handleStatusFilter}
+              className="w-full"
             >
               <Option value="all">Tất cả trạng thái</Option>
               <Option value="active">Đang hiệu lực</Option>
@@ -733,31 +857,41 @@ const ContractPage: React.FC = () => {
               <Option value="terminated">Đã hủy</Option>
             </Select>
           </Col>
-          <Col xs={24} sm={24} md={8} lg={12} style={{ textAlign: "right" }}>
-            <Space>
+          <Col xs={24} sm={24} md={12} lg={12} className="mb-2 flex flex-wrap gap-2 justify-end">
+            <Space wrap size={[8, 8]}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => showModal()}
+                className="min-w-[120px]"
               >
                 Thêm hợp đồng
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={fetchContracts}>
+              <Button icon={<ReloadOutlined />} onClick={fetchContracts} className="min-w-[90px]">
                 Làm mới
+              </Button>
+              <Button onClick={exportToExcel} icon={<FileTextOutlined />} className="min-w-[110px]">
+                Xuất Excel
               </Button>
             </Space>
           </Col>
         </Row>
 
         <Table
-          dataSource={filteredContracts}
+          dataSource={contracts}
           columns={columns}
           rowKey="id"
           loading={loading}
           pagination={{
-            pageSize: 10,
+            current: page,
+            pageSize: limit,
+            total: pagination.totalItems || contracts?.length || 0,
             showSizeChanger: true,
+            showQuickJumper: true,
             showTotal: (total) => `Tổng cộng ${total} hợp đồng`,
+            onChange: (newPage, newPageSize) => {
+              applyFilters({ page: newPage, limit: newPageSize });
+            }
           }}
           scroll={{ x: "max-content" }}
         />
@@ -769,8 +903,10 @@ const ContractPage: React.FC = () => {
         open={isModalVisible}
         onCancel={handleCancel}
         onOk={handleSubmit}
-        width={700}
+        width={typeof window !== 'undefined' && window.innerWidth < 600 ? '98vw' : 700}
         destroyOnClose
+        bodyStyle={{ padding: 12 }}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical" requiredMark="optional">
           <Row gutter={16}>
@@ -910,7 +1046,8 @@ const ContractPage: React.FC = () => {
         title="Chi tiết hợp đồng"
         open={isDetailModalVisible}
         onCancel={handleDetailCancel}
-        width={700}
+        width={typeof window !== 'undefined' && window.innerWidth < 600 ? '98vw' : 700}
+        style={{ top: 20 }}
         footer={[
           <Button key="close" onClick={handleDetailCancel}>
             Đóng
@@ -926,6 +1063,7 @@ const ContractPage: React.FC = () => {
             In hợp đồng
           </Button>,
         ]}
+        bodyStyle={{ padding: 12 }}
       >
         {detailLoading ? (
           <div style={{ textAlign: "center", padding: "20px" }}>
